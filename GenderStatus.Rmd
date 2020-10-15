@@ -1,0 +1,144 @@
+---
+title: "Preregistration: Bayesian Analysis for the Gender, Status, and Emotions Project"
+author: "Suzanne Hoogeveen & Julia Haaf"
+date: "10/15/2020"
+bibliography: "MyBibs.bib"
+csl: "apa6.csl"
+header-includes:
+  - \usepackage{marginnote}
+  - \newcommand{\readme}[1]{\emph{\marginnote{Julia} (#1)}}
+  - \newcommand{\readmoi}[1]{\emph{\marginnote{Suus} (#1)}}
+output:
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+We outline a Bayesian analysis for the gender-and-anger backlash effect of Study 1 in the Gender, Status, and Emotion project: We will construct various hierarchical models that reflect the predictions from the proposed theories. The evidence for each of these different theories will be quantified by Bayes factor model comparison, following the approach by @haaf2017developing and @rouder2019beyond. 
+
+## The effect
+
+This work involves a high-powered replication of the gender-and-anger backlash effect [@brescoll2008can]: whereas angry men in a professional context are accorded higher status, angry women are accorded lower status, compared to sad men and sad women, respectively. 
+In addition to attempting to replicate this key effect, various theory-based alternative perspectives are compared. To this end, several moderator variables are added to the design. 
+
+### Dependent variable
+
+1. status conferral (1-11 scale)
+
+### Main Independent Variables
+
+1. target gender (male vs. female)
+2. emotion (anger vs. sadness)
+3. rater gender (male vs. female)
+4. culture (West vs. East)
+
+### Moderators 
+
+Gender beliefs: 
+This construct is relevant to theory 3. The main idea is that raters who are aware of and hold strong beliefs about the presence of gender inequality apply reversed gender sterotyping (favorably evaluating women). 
+
+1. 'Concern' about gender inequality in workplace (5 items)
+2. sexist beliefs (3 items; reversed)
+3. exposure to news/#MeToo movement (6 items)
+4. internal motivation not to be sexist (3 items)
+
+Social desirability / self-presentation: 
+This construct is relevant to theory 4. Tthe main idea is that raters who are concerned about coming off as sexist apply reversed gender stereotyping (favorably evaluating women). This dimension may be operationalized in (a combination of these) 7 ways. 
+
+1. external motivation not to be sexist (3 items)
+2. research study experience: number of studies participated in;
+3. research study experience: participation in similar study (yes/no)
+4. research study experience: psychology course taken (yes/no)
+5. suspicion: hypothesis is about gender (coded yes/no based on open question)
+6. suspicion: awareness of being influenced by target gender (1-9 scale)
+7. suspicion: awareness of being influenced by target emotion (1-9 scale)
+
+\readmoi{I think they proposed to test all these operationalizations separately. However, we could also think about combining some?}
+
+Manipulation check:
+
+- gender of target (male/female; correct/incorrect)
+- expression of anger (1-7 Likert scale)
+- expression of sadness (1-7 Likert scale)
+
+Additional:
+
+- age
+- political orientation
+- occupation
+- years of work experience
+- nationality
+- years of residence
+- English experience
+- education level
+- personal income
+- parental income
+
+Exclusion criteria:
+
+1. intent-to-treat: include all
+2. exclude: less than 5 years of English experience, unrealisticly fast completion (?), manupulation check failures (but what is criterion for emotion questions?), straightline (always same option on response scale). 
+
+For the scales: items will be dropped when alpha < .40 until alpha > .40. 
+
+## Theoretical Perspectives
+
+1. The *Gender Stereotyping* perspective predicts female managers suffer backlash and decrements in status for expressing anger because they have violated implicit prescriptive norms [@brescoll2008can]. 
+2. The *Status Signaling* perspective predicts that anger projects dominance and status for both men and women. 
+3. The *Cultural Change* perspective predicts that anger expressions lead to favorable evaluations of women relative to men, due to exposure to feminist messages and the #MeToo movement. (Effects are driven by internal motivations related to gender inequality.)
+4. The *Study Savviness* perspective similarly predicts that angry women are favorably evaluted, but due to awareness of the study topic, external motivation not to appear prejudiced, and previous research experience. This should specifically apply to male participants, as they may be concerned about appearing sexist. (Effects are driven by external motivations related to self-presentation of not being sexist.)
+5. The *Cultural Differences* perspective predicts that anger may have possitive effects in Western cultures but negative effects in harmony-oriented Eastern cultures. 
+
+These theoretical perspectives lead to the following predictions: 
+
+1. Anger increases status conferral to male targets, for all raters across all cultures, and descreases status conferral to female targets, for all raters across all cultures, and male targets are generally accorded more status.
+2. Anger increases status conferral to all targets, for all raters across all cultures, and male targets are generally accorded more status.
+3. Anger increases status conferral to female targets only, for female raters across all cultures, and female targets are generally accorded more status.
+4. Anger increases status conferral to female targets only, for male raters across all cultures, and female targets are generally accorded more status. 
+5. Anger increases status conferral to all targets, for all raters in Western societies, and decreases status conferral to all targets, for all raters in Eastern societies. 
+
+Moderators:
+
+1. No moderators 
+2. Beliefs about gender inequality in the workplace may reduce status conferral to male targets (?), sexist beliefs increase status conferral to male targets, exposure to #MeToo movement may reduce status conferral to male targets, motivation to respond without sexism may reduce status conferral to male targets (?). \readmoi{While thses moderators are mentioned, they are not crucial for the theoretical perspective.}
+3. Beliefs about gender inequality in the workplace predict status conferral to female targets, sexist beliefs decrease status conferral to female targets, exposure to #MeToo movement increases status conferral to female targets, internal motivation to respond without sexism increases status conferral to female targets. 
+4. external motivation to respond without sexism increases status conferral to female targets, high study experience increases status conferral to female targets (3 operationalizations), suspicion of study hypothesis increases conferral to female targets (3 operationalizations). 
+5. No moderators
+
+
+# Moderator scales
+
+1. News exposure scale (1-7 Likert scale)
+- How frequently do you read news articles?
+- To what extent are you familiar with the #MeToo movement?
+- How often have you come across news articles about gender discrimination in the workplace? 
+- How much exposure have you had to online commentary (e.g., Twitter, Facebook, etc) alleging biases against women in professional settings? 
+- How much exposure have you had to mainstream news coverage (e.g., newspapers, television news programs) alleging biases against women in professional settings? 
+- To what extent have you been actively following the #MeToo movement? 
+
+2. Internal motivation to respond without sexism (1-7 Likert scale)
+- I am personally motivated by my beliefs to be nonsexist toward women. 
+- Being nonsexist toward women is important to my self-concept. 
+- Because of my personal values, I believe that using stereotypes about women is wrong. 
+
+3. External motivation to respond without sexism (1-7 Likert scale)
+- Because of today’s PC (politically correct) standards I try to appear nonsexist toward women.  
+- I try to hide any negative thoughts about women in order to avoid negative reactions from others. 
+- I attempt to appear nonsexist toward women in order to avoid disapproval from others.  
+
+4. Beliefs about gender in the workplace (1-7 Likert scale)
+- Women are more likely to be passed over for assignments in the workplace than men are
+- Women experience more instances of bias in the workplace than men do
+- Men tend to get more opportunities than women do in the workplace
+- Do you believe there is more bias against women or against men in professional settings, limiting their chances for advancement? 
+- Female managers face systematic gender discrimination in today’s workplaces. 
+
+5. Sexist beliefs (1-7 Likert scale)
+- It’s a fact that men are better suited for some	jobs than are women.
+- Sometimes it’s the objective thing to do to hire a man rather than a woman.
+- It’s a fact that men are better suited than women for the type of work the candidate 
+
+# References
