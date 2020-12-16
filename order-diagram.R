@@ -10,41 +10,46 @@ fig.ex1 <- function(){
   
   par(mar = c(1, 0, 2, 0))
   
-  ## No Prejudice Model
+  ## Gender Stereotyping model (female backlash effect)
+  ## Unconstrained Model
   openplotmat(main = "A. Gender Stereotyping")
-  elpos <- coordinates (c(1, 2, 1), relsize = .9)
-  ord <- c(1,3,4,2)
+  #elpos <- coordinates (c(1, 2, 1), relsize = .9)
+  #ord <- c(1,3,4,2)
+  elpos <- cbind(c(.35, .65, .35, .65), c(.8, .6, .4, .2))
+  ord <- c(1,4,3,2)
   names.n <- names[ord]
   cols.n <- cols[ord]
   
-  straightarrow(from = elpos[1, ], to = elpos[2, ], arr.length = 0)
+  #straightarrow(from = elpos[1, ], to = elpos[2, ], arr.length = 0)
   straightarrow(from = elpos[1, ], to = elpos[3, ], arr.length = 0)
   straightarrow(from = elpos[2, ], to = elpos[4, ], arr.length = 0)
-  straightarrow(from = elpos[3, ], to = elpos[4, ], arr.length = 0)
+  #straightarrow(from = elpos[3, ], to = elpos[4, ], arr.length = 0)
   #straightarrow(from = elpos[1, ], to = elpos[4, ], arr.length = 0)
   #straightarrow(from = elpos[2, ], to = elpos[3, ], arr.length = 0)
   for ( i in 1:4){
     textround (elpos[i, ], 0.04, 0.06, lab = names.n[i], cex = 1.5, shadow.size = 0, box.col = cols.n[i])
   }
   
-  ## Prejudice Model
+  ## Status Signalling Model
   openplotmat(main = "B. Status Signalling")
-  elpos <- coordinates (c(1, 2, 1), relsize = .9)
-  ord <- c(1,3,2,4)
+  #elpos <- coordinates (c(1, 2, 1), relsize = .9)
+  #ord <- c(1,3,2,4)
+  elpos <- cbind(c(.35, .65, .35, .65), c(.8, .6, .4, .2))
+  ord <- c(1,2,3,4)
   names.n <- names[ord]
   cols.n <- cols[ord]
   
-  straightarrow(from = elpos[1, ], to = elpos[2, ], arr.length = 0)
+  #straightarrow(from = elpos[1, ], to = elpos[2, ], arr.length = 0)
   straightarrow(from = elpos[1, ], to = elpos[3, ], arr.length = 0)
   straightarrow(from = elpos[2, ], to = elpos[4, ], arr.length = 0)
-  straightarrow(from = elpos[3, ], to = elpos[4, ], arr.length = 0)
+  #straightarrow(from = elpos[3, ], to = elpos[4, ], arr.length = 0)
   #straightarrow(from = elpos[1, ], to = elpos[4, ], arr.length = 0)
   
   for ( i in 1:4){
     textround (elpos[i, ], 0.04, 0.06, lab = names.n[i], cex = 1.5, shadow.size = 0, box.col = cols.n[i])
   }
   
-  ## No Prejudice Model
+  ## Reverse Gender Biases Model
   openplotmat(main = "C. Cultural Change /\nStudy Savviness")
   elpos <- coordinates (c(1, 3), relsize = .9)
   ord <- c(2,4,1,3)
