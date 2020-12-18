@@ -64,8 +64,9 @@ In addition to the main tests of the theoretical perspectives, we will look at t
 - main effect of target gender: are male or female targets generally accorded more status? 
 - gender of the rater: do male and female raters differentially display the main effects or interactions derived from the theoretical perspectives (e.g., do male or female raters particulartly show gender stereotyping effects or reversed gender biases?)
 - individual differences: what are the effects of workplace gender beliefs, sexist beliefs, #MeToo exposure, internal motivation to respond without sexism, external motivation to respond without sexism, study experience (number of research studies participated in, participanted in similar study (yes/no), psychology course taken(yes/no)), suspicion (hypothesis about gender (yes/no), influenced by gender, influenced by emotion). 
+- for the best-performing model, we will additionally investigate whether effects differ per lab (i.e., a random effects model). 
 
-These individual difference moderations will be used to distinguish between perspective 3 and 4, which predict the same overall pattern of responses, yet driven by different differences (see below). In addition, the moderator analyses will serve to further unpack what individual differences are related to the observed effects. 
+These individual difference moderations will be used to distinguish between perspective 3 and 4, which predict the same overall pattern of responses, yet driven by different differences (see below). In addition, the moderator analyses will serve to further unpack what individual differences are related to the observed effects. These moderators are expected to be related to the target gender effect, as they should specifically affect status conferral to women (vs. men). Therefore, moderators will be included as an interaction with gender. 
 
 ### Moderators for individual differences  
 
@@ -92,14 +93,6 @@ The multiverse approach allows us to assess the evidence across multiple potenti
 
 ## Variables to include in the multiverse
 
-###  Modeling-related dimensions
-
-- Modeling random effects vs. common effects.
-1. Use a common effect model
-2. Use a varying effects model (random effects across regions)
-
-While the random effects models are much more informative they are also more complex and it is more difficult to find evidence for them when the experimental effect is small. Since we don't know the data well enough and we don't know whether we will have the resolution for complex models we will use both simple common-effect models and random-effects model.
-
 ### Exclusion criteria 
 
 - English fluency. 
@@ -118,14 +111,10 @@ While the random effects models are much more informative they are also more com
 2. Exclude participants who always selected the same option on all items within each of the 5 scales
 
 
-In total, there will be $2\times2\times2\times2= `r 2*2*2*2`$ conditions for the multiverse analysis.
+In total, there will be $2\times2\times2= `r 2*2*2`$ conditions for the multiverse analysis.
 
-Exclusion criteria:
-b. always the same option on all items within each of the two longer scales (5+ items) ???
+To assess whether we want to do an exclusion or no exclusion at all we suggest to only analyze the level if there is less than 95% overlap with other levels. We assume that otherwise the exclusions will not have a meaningful effect on the results. 
 
-To assess whether we want to do an exclusion or no exclusion at all we suggest to only analyze the level if more than 5% of the sample are excluded. We assume that otherwise the operationalisation differences will not have a meaningful effect on the results. 
-
-\readmoi{Do we also want to check if different exclusion criteria overlap?}
 
 For the scales: items will be dropped when alpha < .40 until alpha > .40. 
 
@@ -172,47 +161,52 @@ We think small effects in the predicted direction may still be meaningful. We th
 
 We will use Bayesian hierarchical modeling with participants nested in countries/labs. We will first construct an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. In the primary analysis, we will used different ordinal constraints to capture the different theoretical predictions (see below). Bayes factor model comparison will be used to compare the models and determine what theory best predicts the empirical data. This method is based on the work by @haaf2018capturing. 
 
-The base model for the gender and emotion effect on status conferral is: 
-\[Y_{ijk} \sim N(\alpha_i + p_j \beta_i + r_j \gamma_i + w_j \zeta_i + l_j \omega_i + x_k \eta_i + u_{ik} \theta_{i1} + v_{ik} \theta_{2} + l_{jk} \theta_{i3} + m_{jk} \theta_{i4} + c_{jk} \theta_{i5} + d_{jk} \theta_{i6} + t_{ik} \theta_{i7}, \sigma^2),\]
-where, 
-
-- $\alpha_i$ is the baseline rating for $i$th lab
-- $\beta_i$ is the target gender effect for $i$th lab
-- $\gamma_i$ is the target emotion effect for $i$th lab
-- $\zeta_i$ is the culture (East vs. West) effect for $i$th lab
-
-
-- $\eta_i$ is the general experimental effect for $i$th region
-- $\theta_{i1}$ is the $i$th region's experimental effect for US participants
-- $\theta_{2}$ is the experimental effect for New England participants 
-- $\theta_{i3}$ is the $i$th region's experimental effect for Protestant participants
-- $\theta_{i4}$ is the $i$th region's experimental effect for highly religious participants
-- $\theta_{i5}$ is the $i$th region's experimental effect for participants who endorse PWE
-- $\theta_{i6}$ is the $i$th region's experimental effect for high SES participants
-- $\theta_{i7}$ is the $i$th region's experimental effect for participants from self-expression cultures
-
-c_j is the 
-
 ### Theoretical Predictions:
 
 1. Null Model: angry men, sad men, angry women and sad women are all accorded equal status. 
 
+Let $Y_{ijk}$ be the status rating of the $i$th lab, the $j$th participant in the $k$th target gender condition and the $l$th target emotion condition. Then 
+
 \[Y_{ijk} \sim N(\alpha_i, \sigma^2),\]
 
 2. Gender Stereotyping: while angry men are accorded higher status than sad men, angry women are accorded lower status than sad women. 
-(main effect of gender, emotion effect for men, emotion effect for women?)
 
-Common: 
-\[Y_{ijk} \sim N(\alpha_i + x_j \beta_i + r_j \gamma_i +  w_j \zeta_i + l_j \omega_i + u_{ik} \theta_{1}, \sigma^2),\]
-with $\theta_1 > 0$
+\[Y_{ijk} \sim N(\alpha_i + x_1 \beta + x_2 \gamma + x_3 \theta, \sigma^2),\]
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. Parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect. The indicator variables are x_1 (-1/2 for female targets and 1/2 for male targets), x_2 (-1/2 for sadness and 1/2 for anger), and x_3 (-1/2 for angry women and sad men, 1/2 for sad women and angry men). 
 
-Random: 
-\[Y_{ijk} \sim N(\alpha_i + p_j \beta_i + r_j \gamma_i +  w_j \zeta_i + l_j \omega_i + u_{ik} \theta_{i1}, \sigma^2),\]
-with all $\theta_{i1} > 0$
+The theoretical perspective does not put ordinal constraints on the main effects of gender and emotion, only on the interaction effect. Specifically, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the sad women condition needs to be higher than the cell mean of the angry women condition. To meet this condition, the inequality constraints $\theta > 0$ and $\theta > \gamma$ and $\theta > -\gamma$ have to hold.  (???? I think I'm too stupid for this...)
 
-## Questions:
+3. Status Signaling: angry men are accorded higher status than sad men and angry women are accorded higher status than sad women. 
 
-1. what do we expect the moderators to affect exactly? Main effects, interactions? 
-2. just to be sure, we removed the order constraints for a main effect of gender, but this is given as key theoretical predictions of the Gender Stereotyping model in Table 1 (indicated by an asterisk). 
+\[Y_{ijk} \sim N(\alpha_i + x_1 \beta + x_2 \gamma + x_3 \theta, \sigma^2),\]
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. Parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect. The indicator variables are x_1 (-1/2 for female targets and 1/2 for male targets), x_2 (-1/2 for sadness and 1/2 for anger), and x_3 (-1/2 for angry women and sad men, 1/2 for sad women and angry men). 
+
+The theoretical perspective requires that both angry men are accorded more status than sad men and that angry women are accorded more status than sad women. It does not put constraints on the main effect of gender and allows for an interaction effect. Specifically, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the angry women condition needs to be higher than the cell mean of the sad women condition. To meet this condition, the inequality constraints $\gamma > 0$ and $\gamma > \theta$ and $\gamma > -\theta$ have to hold. 
+
+4. Culture Change/ Study Savviness: angry women are accorded more status than sad women, angry men and sad men. There is no effect of emotion for men. 
+
+\[Y_{ijk} \sim N(\alpha_i + x_1 \beta + x_2 \gamma, \sigma^2),\]
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. Parameter $\beta$ is the effect of emotion for female targets, parameter $\gamma$ is the effect of angry women versus men (both sad and angry). The indicator variables are x_1 (-1/2 for sad female targets and 1/2 for angry female targets, and 0 for men) and x_2 (-1/3 for men, 2/3 for angry women and 0 for sad women). 
+
+The theoretical perspective entails that the cell mean of the angry women condition needs to be higher than the sad women condition and higher than the cell means of the angry men and the sad men conditions. To meet this condition, the inequality constraints $\beta > 0$ and $\gamma > 0$ have to hold.  
+
+5. Cultural Differences: in Western cultures, angry men and women are accorded more status than sad men and women, while in Eastern cultures, sad men and women are accorded more status than angry men and women.  
+
+\[Y_{ijk} \sim N(\alpha_i + x_1 \beta + x_2 \gamma + x_3 \theta + x_4 \delta + x_5 \eta + x_6 \zeta + x_7 \omega, \sigma^2),\]
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. Parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect.  The indicator variables are x_1 (-1/2 for female targets and 1/2 for male targets), x_2 (-1/2 for sadness and 1/2 for anger), and x_3 (-1/2 for angry women and sad men, 1/2 for sad women and angry men). In addition, parameter $\delta$ is the effect of culture, parameter $\eta$ is the culture-by-emotion interaction effect,  parameter $\zeta$ is the culture-by-gender interaction effect, and parameter $\omega$ is the culture-by-gender-by-emotion threeway interaction. 
+......
+
+The theoretical perspective entails that the cell mean of the angry women condition needs to be higher than the sad women condition and higher than the cell means of the angry men and the sad men conditions. To meet this condition, ........ 
+
+5. Unconstrained model: all effects are included, without any ordinal constraints.
+\[Y_{ijk} \sim N(\alpha_i + x_1 \beta + x_2 \gamma + x_3 \theta + x_4 \delta + x_5 \eta + x_6 \zeta + x_7 \omega, \sigma^2),\]
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. Parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect. In addition, parameter $\delta$ is the effect of culture, parameter $\eta$ is the culture-by-emotion interaction effect,  parameter $\zeta$ is the culture-by-gender interaction effect, and parameter $\omega$ is the culture-by-gender-by-emotion three-way interaction.
+
+\readmoi{do we include culture effects here?}
+
+Questions:
+
+1. I'm not sure at all how to specify the ordinal constraints for the cultural differences model... 
+2. I now just mentioned the moderator analyses, and the fact that they will be included as interactions with gender. Do we also have to write them out? 
 
 # References

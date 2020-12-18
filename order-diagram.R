@@ -50,7 +50,7 @@ fig.ex1 <- function(){
   }
   
   ## Reverse Gender Biases Model
-  openplotmat(main = "C. Cultural Change /\nStudy Savviness")
+  openplotmat(main = "C. Culture Change /\nStudy Savviness")
   elpos <- coordinates (c(1, 3), relsize = .9)
   ord <- c(2,4,1,3)
   names.n <- names[ord]
