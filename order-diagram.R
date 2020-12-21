@@ -128,7 +128,7 @@ fig.ex1 <- function(){
     textround (elpos[i, ], 0.04, 0.06, lab = names.n[i], cex = 1.5, shadow.size = 0, box.col = cols.n[i])
   }
   
-  leglab <- c("Angry expression, male target", "Angry expression, female target", "Sad expression, male target", "Sad expression, female target")
+  leglab <- c("Anger expression, male target", "Anger expression, female target", "Sadness expression, male target", "Sadness expression, female target")
   legend(.02, .55, legend = leglab, fill = cols.n, bty = "n", cex = 1.3)
   # legend(.5, .1, legend = leglab[3:4], fill = cols.n[3:4], bty = "n", cex = 1.3, horiz = T, xjust = .5)
   
