@@ -7,6 +7,7 @@ author:
     affiliation   : "1"
     corresponding : yes    # Define only one corresponding author
     email         : "suzanne.j.hoogeveen@gmail.com"
+    address       : ""
   - name          : "Julia M. Haaf"
     affiliation   : "1"
 
@@ -14,7 +15,7 @@ affiliation:
   - id            : "1"
     institution   : "University of Amsterdam"
 
-note: Version 1, 02/2021
+note: Version 1, 03/2021
 
 abstract: "" 
   
@@ -41,6 +42,7 @@ urlcolor          : blue
 lang              : "english"
 class             : man
 output            : papaja::apa6_pdf
+#output            : papaja::apa6_word
 csl               : apa6.csl
 ---
 \newcommand{\calM}{\mathcal M}
@@ -48,7 +50,7 @@ csl               : apa6.csl
 
 ```{r setup}
 knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(cache.extra = 2021)
@@ -65,19 +67,10 @@ library("patchwork")
 source("helpFunctions.R")
 ```
 
-```{r refs}
-r_refs(file = "r-references.bib")
+```{r refs, cache=F}
+r_refs(file = "r-references.bib", append = F)
 my_citations <- cite_r(file = "r-references.bib")
 ```
-
-
-# Notes about the data: 
-
-1. In the merged datafile, for some sites there are still text responses while others are numeric (e.g., SimilarStudy, Psy_Course). I now just recoded and combined them. 
-2. Suspicion about the hypothesis being about gender is not coded yet. 
-3. I now binned the number of studies data because it was extremely right-skewed due to some people reporting that they've done about 10000 studies before... -_-
-4. Language experience is not coded/included for one of the German samples (12), probably because the column is called "GermanExperience" instead of "EnglishExperience". I now just copied that data to the EnglishExperience column. 
-5. We said that we would compare adult and students samples; is there an 'official' list which samples targetted students and which adults? Or do we have to do some sort of check of the relative number of participants in university per site? Or do we simply inspect any effect of being a student at the individual level (i.e., depending on the response to the university question)?
 
 # Theoretical Perspectives 
 
@@ -101,11 +94,11 @@ Note that perspectives 3 and 4 predict the same general pattern. Only in the fol
 
 ```{r data}
 # Do once: save anonymized version of the data including only relevant variables for the analyses. 
-#data <- read.csv2('data/EmotionExpressionS1v2.csv', header=T)
+#data  <- read.csv2('data/EmotionExpressionS1v3.csv', header=T)
 #mydata <- data[!is.na(data$Status.1),c(1,59:91,96:102,105:119)]
-#write.csv(mydata, file="data/EmotionExpressionStudy1Anonymous.csv", row.names = F)
+#write.csv(mydata, file="data/EmotionExpressionStudy1Anonymous2.csv", row.names = F)
 
-data <- read.csv("data/EmotionExpressionStudy1Anonymous.csv", header=T)
+data <- read.csv("data/EmotionExpressionStudy1Anonymous2.csv", header=T)
 
 # relevant variables: 
 # status: Status.1
@@ -180,6 +173,7 @@ sb.a  <- psych::alpha(SB)$total$std.alpha
 ```
 
 As preregistered, we assessed the reliablity of the individual differences scale by calculating Cronbach's alpha. All five scales were internally consistent and surpassed the threshold of alpha > 0.4; the alpha values were `r nes.a` (news exposure scale), `r im.a` (internal motivation not to be sexist), `r bgw.a` (beliefs about gender inequality in the workplace), `r sb.a` (sexist beliefs), and `r em.a` (external motivation not to appear sexist). 
+The variable *number of studies previously participated in* was heavily right-skewed and was therefore binned into 6 groups: "0", "1-2", "3-5", "6-10", "11-20", "20+". 
 
 ## Procedure
 
@@ -296,7 +290,7 @@ bayes.re <- doRandom(dat, dat$status, rscale)
 As visualized in Figure \@ref(fig:plotter), however, there is no indication that the effects vary substantially across data collection sites. Rather, the 95% credible interval includes zero for across all but one site for the main effects of target gender and target emotion, as well as the interaction effect. Also note that the estimates do not suggest a difference between Western and Eastern countries with regards to any of the effects (nor a special position for Iran). 
 Corroborating the visual pattern, the Bayes factor analysis suggests that the null-model that includes only varying intercepts strongly outperforms the unconstrained random effects model; BF$_{0r}=$ `r myformat(bayes.re$BF_0r)`. 
 
-```{r plotter, fig.width=6.5, fig.asp=1, fig.cap="Estimated country-level effects (posterior means) in increasing order. **A.** Intercepts. **B.** Target gender effects. **C.** Target emotion effects. **D.** Gender-by-emotion interaction effects. Each dot represents a country. The horizontal lines denote the 95\\% credible intervals. All effects do not seem to differ from zero across countries."}
+```{r plotter, fig.width=6.5, fig.asp=1, fig.cap="Estimated country-level effects (posterior means) on status conferral, in increasing order. **A.** Intercepts. **B.** Target gender effects. **C.** Target emotion effects. **D.** Gender-by-emotion interaction effects. Each dot represents a country. The horizontal lines denote the 95\\% credible intervals. None of the effects seem to differ from zero across countries."}
 par(mfrow=c(2,2))
 J <- length(unique(countries))
 colors <- hsv((1:J)/J,1,.7,1)
@@ -456,6 +450,12 @@ aware.emotion <- case_when(aware.emotion == "NO\n1" ~ 1,
                           aware.emotion == "YES\n9" ~ 9,
                           TRUE ~ as.numeric(aware.emotion))
 
+
+#study about
+targetwords <- c("gender","sex","female","male"," women "," woman "," men "," man ")
+contains <- sapply(targetwords,function(x) grepl(x,data$StudyAbout))
+total <- apply(contains, 1, any)
+
 dat <- data.frame(subj = 1:nrow(data), 
                   site = site,
                   country = country,
@@ -551,11 +551,11 @@ apa_table(tab,
           escape=F)
 ```
 
-For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the critical interaction terms between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
+For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the interaction term between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender, and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
 
 The results of the individual differences moderation analyses are given in Table \@ref(tab:moderator-table1) (for moderation effects related to beliefs about gender (in)equality; perspective 3) and Table \@ref(tab:moderator-table2) (for moderation effects related to self-presentation concerns and study savviness; perspective 4).[^y] As the Bayes factors show, there is evidence that most of the individual difference measures are related to status conferral in general (main effects of individual differences), but strong evidence *against* moderation effects of the individual differences on the experimental target gender, target emotion, or target gender-by-emotion effects (BF$_{im}$). 
 
-[^y]: Note that 'suspicion of the hypothesis being about gender' was not included as a predictor, as we did not code the open responses (yet). 
+[^y]: Note that 'suspicion of the hypothesis being about gender' was not included as a predictor, as only `r sum(total)/nrow(data)*100`% of participants mentioned any of the terms 'gender', 'sex', 'female', 'woman', 'women', 'male', 'man', 'men' in the free response to the question what the study was about. 
 
 
 ```{r dat-students, eval = T}
@@ -591,8 +591,9 @@ dat.student <- dat
 bayes.student <- doBayesModerators(dat, dat$status, rscale, dat$student, pos = T)
 ```
 
-__*General public vs. students.*__ Finally, we assessed whether students and adults from the general public differed in the extent to which they applied (reversed) gender stereotyping. However, again the individual differences-only model (main effect of student status) outperformed all other models including those with a moderating effect of student status (BF$_{im}=$ `r myformat(bayes.student$bfsID[3])`; see also Figure \@ref(fig:fig-student)). 
+__*General public vs. students.*__ Finally, we assessed whether students and adults from the general public differed in the extent to which they applied (reversed) gender stereotyping.[^k] However, again the individual differences-only model (main effect of student status) outperformed all other models including those with a moderating effect of student status (BF$_{im}=$ `r myformat(bayes.student$bfsID[3])`; see also Figure \@ref(fig:fig-student)). 
 
+[^k]: The student vs. general public status was determined at the individual level (rather than the sample level) based on responses to the item 'Are you currently a university student?'. 
 
 ```{r multiverse}
 ## Language experience 
