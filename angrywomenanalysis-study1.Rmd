@@ -1,0 +1,1019 @@
+---
+title             : "Bayesian Analysis for the Gender, Status, and Emotions Project - Study 1"
+shorttitle        : "Angry Women"
+
+author: 
+  - name          : "Suzanne Hoogeveen"
+    affiliation   : "1"
+    corresponding : yes    # Define only one corresponding author
+    email         : "suzanne.j.hoogeveen@gmail.com"
+    address       : ""
+  - name          : "Julia M. Haaf"
+    affiliation   : "1"
+
+affiliation:
+  - id            : "1"
+    institution   : "University of Amsterdam"
+
+note: Version 1, 03/2021
+
+abstract: "" 
+  
+keywords          : ""
+
+bibliography      : ["MyBibs.bib","r-references.bib"]
+
+header-includes   :
+   - \usepackage{bm}
+   - \usepackage{amsmath}
+   - \usepackage{setspace}
+   - \usepackage{mathtools}
+   - \usepackage{marginnote}
+   - \newcommand{\readme}[1]{\emph{\marginnote{Julia} (#1)}}
+   
+figsintext        : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+lineno            : no
+mask              : false
+urlcolor          : blue
+
+lang              : "english"
+class             : man
+output            : papaja::apa6_pdf
+#output            : papaja::apa6_word
+csl               : apa6.csl
+---
+\newcommand{\calM}{\mathcal M}
+\newcommand{\calH}{\mathcal H}
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(cache = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(cache.extra = 2021)
+
+library("BayesFactor")
+library("dplyr")
+library("kableExtra")
+library("scales")
+library("papaja")
+library("interactions")
+library("ggplot2")
+library("patchwork")
+
+source("helpFunctions.R")
+```
+
+```{r refs, cache=F}
+r_refs(file = "r-references.bib", append = F)
+my_citations <- cite_r(file = "r-references.bib")
+```
+
+# Theoretical Perspectives 
+
+1. The *Gender Stereotyping* perspective predicts female managers suffer backlash and decrements in status for expressing anger because they have violated prescriptive norms [@brescoll2008can]. 
+2. The *Status Signaling* perspective predicts that anger projects dominance and status for both men and women. 
+3. The *Cultural Change* perspective predicts that anger expressions lead to favorable evaluations of women relative to men, due to exposure to feminist messages. (Effects are driven by internal motivations and beliefs related to gender inequality, and female evaluators should be more likely to exhibit reverse gender biases, since women are more likely to support #MeToo and feminist beliefs.)
+4. The *Study Savviness* perspective similarly predicts that angry women are favorably evaluated, but due to awareness of the study topic, external motivation not to appear prejudiced, and previous research experience. (Effects are driven by external motivations related to self-presentation goals to avoid appearing sexist, and should apply to male participants more so than female participants, since the former are more concerned about appearing sexist.)
+5. The *Cultural Differences* perspective predicts that anger may have positive effects in Western cultures but negative effects in more harmony-oriented Eastern cultures. 
+
+These theoretical perspectives lead to the following predictions: 
+
+1. Anger increases status conferral to male targets across all cultures, and decreases status conferral to female targets across all cultures.
+2. Anger increases status conferral to all targets across all cultures.
+3. Anger increases status conferral to female targets only, across all cultures, and female targets are generally accorded more status.
+4. Anger increases status conferral to female targets only, across all cultures, and female targets are generally accorded more status. 
+5. Anger increases status conferral to all targets, for all raters in Western societies, and decreases status conferral to all targets, for all raters in Eastern societies. 
+
+Note that perspectives 3 and 4 predict the same general pattern. Only in the follow-up moderation analyses will we be able to separate between these two perspectives. 
+
+# Methods
+
+```{r data}
+# Do once: save anonymized version of the data including only relevant variables for the analyses. 
+#data  <- read.csv2('data/EmotionExpressionS1v3.csv', header=T)
+#mydata <- data[!is.na(data$Status.1),c(1,59:91,96:102,105:119)]
+#write.csv(mydata, file="data/EmotionExpressionStudy1Anonymous2.csv", row.names = F)
+
+data <- read.csv("data/EmotionExpressionStudy1Anonymous2.csv", header=T)
+
+# relevant variables: 
+# status: Status.1
+# target: Gender.Condition
+# emotion: Emotion.Condition
+# site: UpdatedMaster 18 different sites 
+
+site <- data$UpdatedMaster
+country <- case_when(site == 1 ~ "Singapore",
+                    site == 2 ~ "Singapore",
+                    site == 6 ~ "United States",
+                    site == 7 ~ "United States",
+                    site == 8 ~ "United States",
+                    site == 9 ~ "United States",
+                    site == 10 ~ "United Kingdom",
+                    site == 11 ~ "United Kingdom",
+                    site == 12 ~ "Austria",
+                    site == 13 ~ "Australia",
+                    site == 14 ~ "India",
+                    site == 15 ~ "Philippines",
+                    site == 16 ~ "Iran",
+                    site == 17 ~ "Singapore",
+                    site == 18 ~ "Singapore",
+                    site == 19 ~ "Australia",
+                    site == 20 ~ "United States",
+                    site == 22 ~ "Germany",
+                    site == 24 ~ "Australia")
+culture <- ifelse(country %in% c("Singapore", "India","Philippines"), "East", "West")
+culture <- ifelse(country == "Iran", NA, culture)
+
+status <- rowMeans(data[,c('Status.1','Power','Independence')])
+
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  perc.anger = as.numeric(data$Correct_Emotion_Ang),
+                  perc.sadness = data$Correct_Emotion_sad)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+```
+
+## Participants
+
+For the primary analyses, we included the full sample of `r nrow(dat)` participants who completed the relevant measures for the main analyses. Participants from Iran are excluded from these main analyses, as they could not be readily classified as culturally 'Westsern' or 'Eastern'. 
+
+## Material
+```{r reliability-scales}
+NES <- data[,paste0("NES",1:6)]
+IM  <- data[,paste0("IM_Non_Sex",1:3)]
+EM  <- data[,paste0("EM_Non_Sex",1:3)]
+BGW <- data[,paste0("BGenWorkplace",1:5)]
+SB  <- data[,paste0("Sexist_Beliefs",1:3)]
+
+# alpha for the scales   
+nes.a <- psych::alpha(NES)$total$std.alpha
+im.a  <- psych::alpha(IM)$total$std.alpha
+em.a  <- psych::alpha(EM)$total$std.alpha
+bgw.a <- psych::alpha(BGW)$total$std.alpha
+sb.a  <- psych::alpha(SB)$total$std.alpha
+
+# correlation between items for composite
+temp <- na.omit(data[,c('Power','Independence','Status.1')])
+iic1 <- mean(c(cor(temp[,1],temp[,2]),cor(temp[,1],temp[,3]),cor(temp[,2],temp[,3])))
+temp <- na.omit(data[,c('Competent_R','Knowledgeable_R')])
+iic2 <- cor(temp[,1],temp[,2])
+temp <- na.omit(data[,c('Likeable','Warm')])
+iic3 <- cor(temp[,1],temp[,2])
+```
+
+The dependent variable 'status conferral' was created by averaging responses to the items on *power*, *independence*, and *status* (average inter-item correlation: `r iic1`). The dependent variable 'competence' was created by averaging responses to the items on *competence* and *knowledgeability* (inter-item correlation: `r iic2`). The dependent variable 'warmth' was created by averaging responses to the items on *likeability* and *warmth* (inter-item correlation: `r iic3`). 
+
+As preregistered, we assessed the reliablity of the individual differences scale by calculating Cronbach's alpha. All five scales were internally consistent and surpassed the threshold of alpha > 0.4; the alpha values were `r nes.a` (news exposure scale), `r im.a` (internal motivation not to be sexist), `r bgw.a` (beliefs about gender inequality in the workplace), `r sb.a` (sexist beliefs), and `r em.a` (external motivation not to appear sexist). 
+The variable *number of studies previously participated in* was heavily right-skewed and was therefore binned into 6 groups: "0", "1-2", "3-5", "6-10", "11-20", "20+". 
+
+## Procedure
+
+## Data analysis
+
+All analyses were conducted in R.[^w]
+We constructed hierarchical Bayesian regression models that reflect the predictions from the 5 substantive theories[^v], as well as the null-model and an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see Appendix for details). The relative predictive adequacy of these models as well as the unconstrained model was compared using Bayes factors, following the approach by @haaf2017developing, @rouder2019beyond and @haaf2018capturing. 
+
+In addition, we assessed the robustness of the findings to somewhat arbitrary analysis decisions by conducting a multiverse analysis [@steegen2016]: We intended to apply different data exclusion criteria related to language experience, a manipulation check, and the validity of responses (straigthlining on the included scales). However, as described below, the language experience and straightlining criteria did not affect a substantial proportion of the sample (less than 2%) and were thus omitted as separate paths in the multiverse analysis. This meant that we only used one robustness check in which we excluded participants who incorrectly recalled the gender of the target. The preregistration for the analysis can be found at \url{https://osf.io/nbx5k}. 
+
+[^w]: For all analyses, we used `r my_citations`.
+[^v]: As perspectives 3 and 4 make equal predictions regarding the overall pattern, there were 4 different theoretical models in total. 
+
+__*Prior settings.*__ We think small effects in the predicted direction may still be meaningful, especially with regard to gender bias where small biases can accumulate in terms of their consequences over time. We therefore used a scale of 0.25 for the effect of interest. A scale of 0.25 assumes an size effect that is 25% of the sampling noise (standard deviation), which is generally considered a small effect. For the variation between labs in the intercepts, we used a scale of 1. In the random-effects models we used a scale of 0.15 for site-specific variation in the effects of interest. 
+
+# Results
+
+## Manipulation check 
+
+As a manipulation check, we assessed whether the target in the *anger* condition was indeed perceived as more angry than the target in the *sadness* condition and vice versa for sadness. 
+
+```{r, "manipulation-check"}
+mc.anger <- as.vector(ttestBF(formula = perc.anger ~ emotion, data = dat, nullInterval = c(0,Inf)))[1]
+samp.mc.anger <- ttestBF(formula = perc.anger ~ emotion, data = dat, posterior=T, iterations=5000)
+mc.sadness <- as.vector(ttestBF(formula = perc.sadness ~ emotion, data = dat, nullInterval = c(-Inf,0)))[1]
+samp.mc.sadness <- ttestBF(formula = perc.sadness ~ emotion, data = dat, posterior=T, iterations=5000)
+```
+
+The independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with anger expressions are perceived as more angry than targets with sad expressions (BF$_{+0} = \infty$, $\delta$ = `r printnum(median(samp.mc.anger[,"delta"]))`). Similarly, the independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with sadness expressions are perceived as more sad than targets with angry expressions (BF$_{-0} = \infty$, $\delta$ = `r printnum(median(samp.mc.sadness[,"delta"]))`). See Figure \@ref(fig:fig-manipulation) for a plot of the data. 
+
+
+```{r fig-culture, eval = T, fig.cap="Status conferral per target gender, emotion, and culture.", fig.width=6, fig.asp=.4, fig.align="H"}
+plotdat <- dat
+plotdat$Culture <- plotdat$culture
+
+par(mar = c(4,4,1,1))
+apa_lineplot(data = plotdat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion", "Culture")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , xlab = "Target Gender"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , args_y_axis = list(at = c(1,6,11))
+             , args_legend = list(x = 1, y = 11
+                                  , cex = 0.8
+                                  , title = "Target Emotion"
+                                  , legend = c("angry", "sad")))
+
+```
+
+## Bayesian Models 
+
+```{r status-analysis, cache=T}
+rscale <- c("main" = 1/4, "int" = 1/4, "rand" = 1, "var" = .15)
+bayes.status <- doBayes(dat, dat$status, rscale)
+
+bfs.status <- bayes.status$bfsu
+bfs0.status <- bayes.status$bfs0
+
+diff.emo.men <- bayes.status$musm[,"muam"] - bayes.status$musm[,"musm"]
+diff.emo.women <- bayes.status$musm[,"muaw"] - bayes.status$musm[,"musw"]
+
+modnames <- c("Null vs. Gender Stereotyping", "Null vs. Status Signalling", "Null vs. Culture Change/Study Savviness", "Null vs. Cultural Differences", "Null vs. Unconstrained")
+
+tab <- data.frame(Comparison = modnames, BFs = myformat(bfs0.status))
+row.names(tab) <- NULL
+
+apa_table(tab,
+          align = c("l","c"),
+          col.names = c("Comparison","Bayes factor"),
+          escape = F,
+          caption = "Evidence for the null model vs. the theoretical models.", 
+          note = "The Bayes factors reflect the evidence in favor of the null model (intercept only) versus the different theoretical perspectives. As becomes evident, the null model outperforms all other models.")
+
+```
+
+Based on the Bayes factor model comparison, we find no evidence for any of the theoretical predictions. Instead, the data are best explained by the null-model that assumes only a varying intercept per site but no experimental effects of target gender and emotion (either as main effects or an interaction). Specifically, the null-model outperforms the Gender Stereotyping model by a factor of `r myformat(bfs0.status[1])`, the Status Signalling model by a factor of `r myformat(bfs0.status[2])`, the Culture Change/Study Savviness model (reversed gender stereotyping) by a factor of `r myformat(bfs0.status[3])`, and the Cultural Differences model by a factor of `r myformat(bfs0.status[4])`. Finally, the null model also fits the data much better than the unconstrained model (BF$_{0u}=$ `r myformat(bfs0.status[5])`). Figure \@ref(fig:fig-culture) and \@ref(fig:fig-main) visualize the absence of any experimental effect. 
+
+__*Varying effects model.*__ For the primary analyses, we constructed simple common effect models that assume that the effects of interest are of equal size across different sites. However, it could be that the effects differ substantially per site (or country), perhaps in a pattern that is different from that postulated by the cultural differences perspective. To explore this possibility, we also built a varying effects model that allows the main effects of target gender and target emotion, as well as the interaction, to vary between sites. Data from Iran was also included in this model.[^q]
+
+[^q]: Note that the reason for removing the Iranian data from the main analyses was that Iran could not straigthforwardly be classified as either a Western or Eastern country.  
+
+```{r varying-model, cache=T}
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  perc.anger = as.numeric(data$Correct_Emotion_Ang),
+                  perc.sadness = data$Correct_Emotion_sad)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+countries <- dat %>% group_by(site) %>% summarize(country = country[1])
+countries <- countries$country
+# varying effects model (target gender and emotion effects)
+bayes.re <- doRandom(dat, dat$status, rscale)
+```
+
+As visualized in Figure \@ref(fig:plotter), however, there is no indication that the effects vary substantially across data collection sites. Rather, the 95% credible interval includes zero for across all but one site for the main effects of target gender and target emotion, as well as the interaction effect. Also note that the estimates do not suggest a difference between Western and Eastern countries with regards to any of the effects (nor a special position for Iran). 
+Corroborating the visual pattern, the Bayes factor analysis suggests that the null-model that includes only varying intercepts strongly outperforms the unconstrained random effects model; BF$_{0r}=$ `r myformat(bayes.re$BF_0r)`. 
+
+```{r plotter, fig.width=6.5, fig.asp=1, fig.cap="Estimated country-level effects (posterior means) on status conferral, in increasing order. **A.** Intercepts. **B.** Target gender effects. **C.** Target emotion effects. **D.** Gender-by-emotion interaction effects. Each dot represents a country. The horizontal lines denote the 95\\% credible intervals. None of the effects seem to differ from zero across countries."}
+par(mfrow=c(2,2))
+J <- length(unique(countries))
+colors <- hsv((1:J)/J,1,.7,1)
+plotter(bayes.re$alphas, c(4,7),  countries, colors, main = "A. Overall Status Conferral", labs = c("Low","High"), noylab = TRUE)
+plotter(bayes.re$betas,  c(-1,1), countries, colors, main = "B. Target Gender Effect", labs = c("Female","Male"), noylab = TRUE)
+plotter(bayes.re$gammas, c(-1,1), countries, colors, main = "C. Target Emotion Effect", labs = c("Sad","Angry"), noylab = TRUE)
+plotter(bayes.re$thetas, c(-1,1), countries, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), noylab = TRUE)
+
+```
+
+## Follow-up Analyses
+
+As preregistered, we inspected the several additional effects and analyses. 
+
+```{r main-gender}
+bf.targ.gender <- as.vector(ttestBF(formula = status ~ gender, data = dat))[1]
+samp.targ.gender <- ttestBF(formula = status ~ gender, data = dat, posterior=T, iterations=5000)
+```
+
+__*Main effect of target.*__ Are male or female targets generally accorded more status? 
+We ran a simple independent-samples t-test to answer this question. Female targets are accorded slightly more status than male targets ($M_{female}=$ `r round(mean(dat$status[dat$gender=="Female"]),2)`; $M_{male}=$ `r round(mean(dat$status[dat$gender=="Male"]),2)`)), yet the Bayes factor analysis provides some slight evidence in favor of the null-hypothesis that there is no difference in status conferral between male and female targets: BF$_{10}=$ `r myformat(bf.targ.gender)`; BF$_{01}=$ `r myformat(1/bf.targ.gender)`. (Frequentist statistics: `r apa_print(t.test(status~gender, data=dat))$statistic`)
+
+
+```{r dat-rater, eval = T}
+# select relevant variables for main analyses
+rater.gender <- ifelse(data$Gender %in% c("Female","Female (Weiblich)", "Frau"), "female",NA)
+rater.gender <- ifelse(data$Gender %in% c("Male", "Male (Männlich)", "Mann"), "male", rater.gender)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  perc.anger = as.numeric(data$Correct_Emotion_Ang),
+                  perc.sadness = data$Correct_Emotion_sad, 
+                  rater.gender = rater.gender)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$rater.gender <- as.factor(dat$rater.gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+plotdat2 <- dat
+plotdat2$Rater <- plotdat2$rater.gender
+```
+
+```{r rater-analysis}
+bayes.rater <- doBayesModerators(dat, dat$status, rscale, dat$rater.gender, pos = F)
+```
+
+```{r rater-analysis-split}
+bf.targ.gender.women <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="female",]))[1]
+bf.targ.gender.men   <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="male",]))[1]
+bf.interaction.gender <- as.vector(generalTestBF(status ~ gender:rater.gender, data=dat))
+```
+
+__*Gender of the rater.*__ Do male and female raters differentially display the main effects or interactions derived from the theoretical perspectives (e.g., do male or female raters particularly show gender stereotyping effects or reversed gender biases?). 
+Figure \@ref(fig:fig-rater) might suggest a hint of a threeway rater gender by target gender by target emotion interaction, such that female raters confer more status to a sad female target while male raters confer more status to an angry female target. However, the Bayes factor analysis indicates that the data is at least equally plausible under the (simple) null-model as under the (complex) moderator interaction model; BF$_{0m}=$ `r myformat(bayes.rater$bfs0[4])`. Finally, the main effect of target gender was tested separately for male and female raters. For female participants, there was slight evidence that female targets ($M_{female}=$ `r mean(dat$status[dat$gender=="Female"&dat$rater.gender=="female"])`) were accorded more status than male targets ($M_{male}=$ `r mean(dat$status[dat$gender=="Male"&dat$rater.gender=="female"])`): BF$_{10}=$ `r bf.targ.gender.women`. For male participants, the analysis indicated strong evidence *against* a difference ($M_{female}=$ `r mean(dat$status[dat$gender=="Female"&dat$rater.gender=="male"])`; $M_{male}=$ `r mean(dat$status[dat$gender=="Male"&dat$rater.gender=="male"])`): BF$_{10}=$ `r bf.targ.gender.men`, BF$_{01}=$ `r 1/bf.targ.gender.men`. However, there was no evidence for an interaction: BF$_{10}=$ `r bf.interaction.gender`, BF$_{01}=$ `r 1/bf.interaction.gender`.
+
+```{r other-dvs-analysis, cache=T}
+# recode competence item and create composite
+competence <- 12 - rowMeans(data[,c('Competent_R','Knowledgeable_R')])
+likeability <- rowMeans(data[,c('Likeable','Warm')])
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  competence = competence,
+                  likeability = likeability,
+                  hiring = data$Hire)
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+
+bayes.competence <- doBayes(dat, dat$competence, rscale)
+bayes.likeability <- doBayes(dat, dat$likeability, rscale)
+bayes.hiring <- doBayes(dat, dat$hiring, rscale)
+
+dat.dvs <- dat
+```
+
+__*Alternative dependent variables.*__ We also used competence ratings, likeability, and hiring rates as secondary dependent variables, in addition to the primary dependent variable of status conferral. Table \@ref(tab:table-all) gives the results of these additional analyses. For competence ratings, the results are qualitatively similar to those of the main analysis (i.e., most evidence for the null-model). For likeability, the unconstrained model outperforms the null-model, as there is a strong main effect of emotion (in the opposite direction of the status signalling perspective): quite understandably, angry targets are liked less than sad targets. This same pattern (albeit less strongly) holds for hiring rates (see Figure \@ref(fig:fig-main)). Also note that for hiring rates, there is some slight evidence in favor of the Gender Stereotyping perspective: the data provides `r myformat(1/bayes.hiring$bfs0[1])` times more support for the model reflecting that sad women are preferred over angry women, while angry men are preferred over sad men compared to the null-model. 
+
+```{r table-all}
+bfs0.competence <- bayes.competence$bfs0
+bfs0.likeability <- bayes.likeability$bfs0
+bfs0.hiring <- bayes.hiring$bfs0
+
+apa_table(data.frame(Comparison = names(bfs0.competence), 
+                     Status = printnum(bfs0.status), Competence = printnum(bfs0.competence), 
+                     Likeability = printnum(bfs0.likeability), Hiring = printnum(bfs0.hiring)),
+          col_spanners = list(`Bayes Factors` = c(2,5)),
+          row.names = FALSE,
+          align = c("l","c","c","c","c"),
+          caption = "Evidence for the null models vs the theoretical models for the different dependent variables.", 
+          escape=F)
+```
+
+
+__*Individual differences.*__ Various individual difference moderators were included in the study in order to unpack any observed experimental effects. Specifically, scales related to beliefs about gender (in)equality as well as about self-presentation concerns were added to distinguish between perspective 3 and 4, which predict the same overall pattern of responses, yet driven by different factors. 
+
+```{r moderator-data}
+number_studies <- data$Number_studies
+number_studies[grepl("ca.", number_studies)] <- gsub("^.*?ca.","",number_studies[grepl("ca.", number_studies)])
+ns <- case_when(number_studies == "0,5" ~ "0.5",
+                number_studies == "1 or 2" ~ "1.5",
+                number_studies == "1,5" ~ "1.5",
+                number_studies == "10?" ~ "10",
+                number_studies == "2 or 3" ~ "2.5",
+                number_studies == "2,5" ~ "2.5",
+                number_studies == "20 to 25" ~ "22.5",
+                number_studies == "3 or 4" ~ "3.5",
+                number_studies == "4 to 5" ~ "4.5",
+                number_studies == "4,5" ~ "4.5",
+                number_studies == "5 to 10" ~ "7.5",
+                number_studies == "6 or 8" ~ "7",
+                number_studies == "6,7" ~ "6.5",
+                number_studies == "many, about 50" ~ "50",
+                number_studies == "mind. 10" ~ "10",
+                number_studies == "mind. 50" ~ "50",
+                number_studies == "mind.5, max.10" ~ "7.5",
+                number_studies == "more then 20" ~ "20",
+                TRUE ~ number_studies)
+ns <- as.numeric(ns)
+#bin number of studies 
+breaks <- c(-1,0,2.1,5,10,20,max(ns, na.rm = T))
+tags <- c("0","1-2","3-5","6-10","11-20","20+")
+studies <- cut(ns, breaks, labels = tags)
+
+# for similar study question 1=yes, 2=no
+simstudy <- data$SimilarStudy
+similar <- case_when(simstudy == "No" ~ 2,
+                      simstudy == "No (Nein)" ~ 2,
+                      simstudy == "Yes" ~ 1,
+                      simstudy == "Yes (Ja)" ~ 1, 
+                      TRUE ~ as.numeric(simstudy))
+psycourse <- data$Psy_Course
+psy <- case_when(psycourse == "No" ~ 2,
+                 psycourse == "No (Nein)" ~ 2,
+                 psycourse == "Yes" ~ 1,
+                 psycourse == "Yes (Ja)" ~ 1, 
+                 TRUE ~ as.numeric(psycourse))
+aware.gender <- data$Gender_Awareness
+aware.gender <- case_when(aware.gender == "NO\n1" ~ 1, 
+                          aware.gender == "Not Sure\n5" ~ 5,
+                          aware.gender == "YES\n9" ~ 9,
+                          TRUE ~ as.numeric(aware.gender))
+aware.emotion <- data$Emotion_Awareness
+aware.emotion <- case_when(aware.emotion == "NO\n1" ~ 1, 
+                          aware.emotion == "Not Sure\n5" ~ 5,
+                          aware.emotion == "YES\n9" ~ 9,
+                          TRUE ~ as.numeric(aware.emotion))
+
+
+#study about
+targetwords <- c("gender","sex","female","male"," women "," woman "," men "," man ")
+contains <- sapply(targetwords,function(x) grepl(x,data$StudyAbout))
+total <- apply(contains, 1, any)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  nes = rowMeans(NES),
+                  im = rowMeans(IM), 
+                  em = rowMeans(EM), 
+                  bgw = rowMeans(BGW), 
+                  sb = rowMeans(SB),
+                  studies = studies,
+                  similar = as.factor(similar), 
+                  psy = as.factor(psy),
+                  aware.gender = aware.gender,
+                  aware.emotion = aware.emotion) 
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$studies <- as.numeric(dat$studies)-3.5
+
+plotdat3 <- dat
+```
+
+```{r moderator-analyses, cache=T}
+# News exposure increases status conferral to women relative to men
+bayes.nes <- doBayesModerators(dat, dat$status, rscale, dat$nes, pos=F)
+# Beliefs about gender inequality in the workplace increase status conferral to women relative to men
+bayes.bgw <- doBayesModerators(dat, dat$status, rscale, dat$bgw, pos=F)
+# Sexist beliefs decrease status conferral to women relative to men
+bayes.sb <- doBayesModerators(dat, dat$status, rscale, dat$sb, pos=T)
+# Internation motivation to respond without sexism increases status conferral to women relative to men
+bayes.im <- doBayesModerators(dat, dat$status, rscale, dat$im, pos=F)
+
+# Models for perspective 4: self-presentation goals and study savviness
+
+# External motivation to respond without sexism predicts more status conferral to women relative to men
+bayes.em <- doBayesModerators(dat, dat$status, rscale, dat$em, pos=F)
+# Number of research studies participated in predicts more status conferral to women relative to men
+bayes.ns <- doBayesModerators(dat, dat$status, rscale, dat$studies, pos=F)
+# Having participated in a similar study predicts more status conferral to women relative to men
+bayes.sim <- doBayesModerators(dat, dat$status, rscale, dat$similar, pos=F)
+# Having taken a psychology course predicts more status conferral to women relative to men
+bayes.psy <- doBayesModerators(dat, dat$status, rscale, dat$psy, pos=F)
+# Awareness of hypothesis being about gender predicts more status conferral to women relative to men
+bayes.awaregen <- doBayesModerators(dat, dat$status, rscale, dat$aware.gender, pos=F)
+# Awareness of hypothesis being about emotion predicts more status conferral to women relative to men
+bayes.awareemo <- doBayesModerators(dat, dat$status, rscale, dat$aware.emotion, pos=F)
+```
+
+```{r moderator-table1}
+bfsI.bgw <- bayes.bgw$bfsID
+bfsI.sb  <- bayes.sb$bfsID
+bfsI.nes <- bayes.nes$bfsID
+bfsI.im  <- bayes.im$bfsID
+
+modnames <- c("Ind.Diff. vs. Null", "Ind.Diff. vs. Exp.Eff.", "Ind.Diff. vs. Mod.Int.", "Ind.Diff. vs. Full")
+tab <- rbind(myformat(bfsI.bgw), myformat(bfsI.sb), myformat(bfsI.nes), myformat(bfsI.im))
+colnames(tab) <- c("BF$_{i0}$", "BF$_{ie}$", "BF$_{im}$", "BF$_{iu}$")
+rownames(tab) <- c("Beliefs Gender Workplace","Sexist Beliefs","News Exposure","Internal Motivation")
+
+apa_table(tab,
+          align = c("l","c","c","c","c"),
+          col_spanners = list(`Bayes Factors` = c(2,5)),
+          caption = "Evidence for gender equality beliefs and experimental effects on status conferral (perspective 3).", 
+          note = "The Bayes factors reflect evidence for the individual differences only model vs the interaction effects models. BF$_{i0}$ gives the evidence for the individual differences only model (indicated by the subscript $i$) versus the null-model (intercept only; indicated by the subscript $0$). Subscript $e$ refers to the experimental effects model, subscript $m$ refers to the moderation model, and subscript $u$ refers to the unconstrained model. See text for details about the different models.",
+          escape=F)
+```
+
+```{r moderator-table2}
+bfsI.em  <- bayes.em$bfsID
+bfsI.ns  <- bayes.ns$bfsID
+bfsI.sim <- bayes.sim$bfsID
+bfsI.psy <- bayes.psy$bfsID
+bfsI.agen <- bayes.awaregen$bfsID
+bfsI.aemo <- bayes.awareemo$bfsID
+
+tab <- rbind(bfsI.em, bfsI.ns, bfsI.sim, bfsI.psy, bfsI.agen, bfsI.aemo)
+tab <- apply(tab, 2, myformat)
+colnames(tab) <- c("BF$_{i0}$", "BF$_{ie}$", "BF$_{im}$", "BF$_{iu}$")
+rownames(tab) <- c("External Motivation No Sexism","Research Study Experience","Participated in Similar Study","Taken Psychology Course","Awareness of Target Gender", "Awareness of Target Emotion")
+
+apa_table(tab,
+          #col_spanners = list(`Bayes Factors` = c(2,7)), 
+          align = c("l","c","c","c","c"),
+          caption = "Evidence for self-presentation concerns and experimental effects on status conferral (perspective 4).", 
+          note = "The Bayes factors reflect evidence for the individual differences only model vs the interaction effects models. BF$_{i0}$ gives the evidence for the individual differences only model (indicated by the subscript $i$) versus the null-model (intercept only; indicated by the subscript $0$). Subscript $e$ refers to the experimental effects model, subscript $m$ refers to the moderation model, and subscript $u$ refers to the unconstrained model. See text for details about the different models. ",
+          escape=F)
+```
+
+For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the interaction term between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender, and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
+
+The results of the individual differences moderation analyses are given in Table \@ref(tab:moderator-table1) (for moderation effects related to beliefs about gender (in)equality; perspective 3) and Table \@ref(tab:moderator-table2) (for moderation effects related to self-presentation concerns and study savviness; perspective 4).[^y] As the Bayes factors show, there is evidence that most of the individual difference measures are related to status conferral in general (main effects of individual differences), but strong evidence *against* moderation effects of the individual differences on the experimental target gender, target emotion, or target gender-by-emotion effects (BF$_{im}$). 
+
+[^y]: Note that 'suspicion of the hypothesis being about gender' was not included as a predictor, as only `r sum(total)/nrow(data)*100`% of participants mentioned any of the terms 'gender', 'sex', 'female', 'woman', 'women', 'male', 'man', 'men' in the free response to the question what the study was about. 
+
+
+```{r dat-students, eval = T}
+# select relevant variables for main analyses
+student <- ifelse(data$University %in% c("Yes","Ja", "Yes (Ja)"), "student", NA)
+student <- ifelse(data$University %in% c("No", "Nein", "No (Nein)"), "adult", student)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  student = student)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$student <- as.factor(dat$student)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+dat.student <- dat
+```
+
+```{r student-analysis}
+bayes.student <- doBayesModerators(dat, dat$status, rscale, dat$student, pos = T)
+```
+
+__*General public vs. students.*__ Finally, we assessed whether students and adults from the general public differed in the extent to which they applied (reversed) gender stereotyping.[^k] However, again the individual differences-only model (main effect of student status) outperformed all other models including those with a moderating effect of student status (BF$_{im}=$ `r myformat(bayes.student$bfsID[3])`; see also Figure \@ref(fig:fig-student)). 
+
+[^k]: The student vs. general public status was determined at the individual level (rather than the sample level) based on responses to the item 'Are you currently a university student?'. 
+
+```{r multiverse}
+## Language experience 
+lang.exp <- data$EnglishExperience
+lang.exp <- case_when(lang.exp == "immer (always)" ~ 20, 
+                      lang.exp == "immer schon (always been)" ~ 20,
+                      lang.exp == "Muttersprache (mother tongue)" ~ 20,
+                      lang.exp == "seit ich sprechen kann (since I can speak)" ~ 20,
+                      lang.exp == "0,5" ~ 0.5,
+                      lang.exp == "1,5" ~ 1.5,
+                      lang.exp == "23,5" ~ 23.5,
+                      lang.exp == "3,5" ~ 3.5,
+                      lang.exp == "5,5" ~ 5.5,
+                      TRUE ~ as.numeric(lang.exp))
+# include when 5 or more years of experience in target language
+pass.1 <- ifelse(lang.exp>=5, 1, 0)
+
+## Target gender check 
+# for gender check question 1=female, 2=male 
+gen.check <- data$Corr_Cand_Gender
+gen.check <- case_when(gen.check == "1" ~ "Female",
+                       gen.check == "Female (Weiblich)" ~ "Female",
+                       gen.check == "weiblich" ~ "Female",
+                       gen.check == "2" ~ "Male",
+                       gen.check == "mÃ¤nnlich" ~ "Male",
+                       gen.check == "Male (Männlich)" ~ "Male",
+                       TRUE ~ gen.check)
+# include when identified gender is the same as gender condition
+pass.2 <- ifelse(gen.check==data$Gender.Condition, 1, 0)
+
+## Straightlining
+sl.nes <- apply(data[,paste0("NES",1:6)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.im  <- apply(data[,paste0("IM_Non_Sex",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.em  <- apply(data[,paste0("EM_Non_Sex",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.bgw <- apply(data[,paste0("BGenWorkplace",1:5)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.sb  <- apply(data[,paste0("Sexist_Beliefs",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl <- cbind(sl.nes, sl.im, sl.em, sl.bgw, sl.sb)
+# include when not straightlined on all 5 scales
+pass.3 <- ifelse(rowSums(sl)<5, 1, 0)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = site,
+                  country = country,
+                  culture = culture,
+                  status = status,
+                  gender = data$Gender.Condition,
+                  emotion = data$Emotion.Condition,
+                  pass.1, 
+                  pass.2,
+                  pass.3) 
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+```
+
+## Multiverse Analysis
+
+In the preregistration we specified that we would only analyze a specific exclusion-based multiverse path when the exclusion affect at least 5% of the sample. However, both the language experience criterion and the straightlining criterion did not reach this threshold; only `r sum(dat$pass.1==0)/nrow(dat)*100`% was excluded because they had less than 5 years of English/German experience and `r sum(dat$pass.3==0)/nrow(dat)*100`% was excluded because of straightlining across all 5 scales. Only the target gender manipulation check item resulted in a meaningful proportion of exclusions (`r sum(dat$pass.2==0)/nrow(dat)*100`%). 
+
+```{r multiverse-path, cache=T}
+# exclude participants how did not recall the target gender. 
+dat <- dat[dat$pass.2==1,]
+
+# main effect of target excluding target gender manipulation failures. 
+bf.targ.gender.excl <- as.vector(ttestBF(formula = status ~ gender, data = dat))[1]
+samp.targ.gender.excl <- ttestBF(formula = status ~ gender, data = dat, posterior=T, iterations=5000)
+
+bayes.multiverse <- doBayes(dat, dat$status, rscale)
+
+modnames <- c("Null vs. Gender Stereotyping", "Null vs. Status Signalling", "Null vs. Culture Change/Study Savviness", "Null vs. Cultural Differences", "Null vs. Unconstrained")
+
+tab <- data.frame(Comparison = modnames, BFs = myformat(bayes.multiverse$bfs0))
+row.names(tab) <- NULL
+
+apa_table(tab,
+          col.names = c("Comparison","Bayes factor"),
+          escape = F,
+          align = c("l","c"),
+          caption = "Evidence for the main analyses including only participants who correctly recalled the target gender.", 
+          note = "The Bayes factors reflect the evidence in favor of the null model (intercept only) versus the different theoretical perspectives.")
+
+```
+
+Table \@ref(tab:multiverse-path) gives the results of the only viable multiverse path for the main analysis in which the models corresponding to the different theoretical perspectives are compared. The pattern of results is qualitatively identical to that of the main analysis including all participants. In other words, the null-model outperforms all theory-driven models. 
+
+__*Multiverse: Main effect of target.*__ As a follow-up, we also assessed the evidence for the main effect of target gender on status conferral when excluding participants who failed to recall the target gender correctly. The Bayes factor analysis provides moderate evidence in favor of the null-hypothesis that there is no difference in status conferral between male and female targets: BF$_{10}=$ `r myformat(bf.targ.gender.excl)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.excl)`. 
+
+# Discussion
+
+
+# References
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id="refs" custom-style="Bibliography"></div>
+\endgroup
+
+\newpage
+
+# Appendix 
+
+## Model Specification
+
+1. Null Model: angry men, sad men, angry women and sad women are all accorded equal status. 
+
+Let $Y_{ijk}$ be the status rating of the $i$th lab, the $j$th participant in the $k$th target gender condition ($k=1,2$, for female and male targets, respectively) and the $l$th target emotion condition ($l=1,2$, for sadness and anger expressions, respectively). Then 
+\[Y_{ijkl} \sim N(\alpha_i, \sigma^2),\]
+
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. 
+
+2. Gender Stereotyping: while angry men are accorded higher status than sad men, angry women are accorded lower status than sad women. 
+\[Y_{ijkl} \sim N(\alpha_i + x_{1k} \beta + x_{2l} \gamma + x_{3kl} \theta, \sigma^2),\]
+where parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect. Effect coding is used to quantify the different conditions. The indicator variables are $x_{1k}$ (-1/2 for female targets and 1/2 for male targets), $x_{2l}$ (-1/2 for sadness and 1/2 for anger), and $x_{3kl}$ (-1/2 for angry women and sad men, 1/2 for sad women and angry men). 
+
+The ordinal constraints based on the theoretical perspective are put on the cell means, rather than on the parameters. Specifically, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the sad women condition needs to be higher than the cell mean of the angry women condition. 
+Cell means are calculated based using the estimated parameters; for the sad women condition, for instance, this results in the following: $Y_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
+
+To satisfy the theoretical predictions, the following inequality constraints have to hold:
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 1} > Y_{\cdot \cdot 1 2} \\
+Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\end{aligned}
+\]
+
+3. Status Signaling: angry men are accorded higher status than sad men and angry women are accorded higher status than sad women. 
+
+The status signaling perspective applies the same model and parameters as the gender stereotyping model. 
+Here, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the angry women condition needs to be higher than the cell mean of the sad women condition. To meet this condition, the following inequality constraints have to hold:
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 2} > Y_{\cdot \cdot 1 1} \\
+Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\end{aligned}
+\]
+
+4. Culture Change/ Study Savviness: angry women are accorded more status than sad women, angry men and sad men. There is no effect of emotion for men. 
+\[Y_{ijkl} \sim N(\alpha_i + x_{4kl} \delta + x_{5kl} \eta, \sigma^2),\]
+where parameter $\delta$ is the effect of emotion for female targets, parameter $\eta$ is the effect of angry women versus men (both sad and angry). The indicator variables are $x_{4kl}$ (-1/2 for sad female targets and 1/2 for angry female targets, and 0 for men) and $x_{5kl}$ (-1/3 for men, 2/3 for angry women and 0 for sad women). 
+
+The theoretical perspective entails that the cell mean of the angry women condition needs to be higher than the sad women condition and higher than the cell means of the angry men and the sad men conditions. To meet this condition, we will put inequality constraints on the parameters:
+\[
+\begin{aligned}
+\delta > 0 \\
+\eta > 0
+\end{aligned}
+\]
+
+5. Cultural Differences: in Western cultures, angry men and women are accorded more status than sad men and women, while in Eastern cultures, sad men and women are accorded more status than angry men and women.  
+This model builds on the model for perspectives 2 and 3 and is extended by parameters for the main effect and interactions of culture (with $m=1,2$, for Western and Eastern cultures, respectively):  
+\[Y_{ijklm} \sim N(\alpha_i + x_{1k} \beta + x_{2l} \gamma + x_{3kl} \theta + x_{6m} \zeta + x_{7km} \xi + x_{8lm} \upsilon + x_{9klm} \omega, \sigma^2),\]
+
+where the additional parameter $\zeta$ is the effect of culture, parameter $\xi$ is the culture-by-gender interaction effect,  parameter $\zeta$ is the culture-by-emotion interaction effect, and parameter $\omega$ is the culture-by-gender-by-emotion three-way interaction. The additional indicator variables are $x_{6m}$ (-1/2 for Western cultures and 1/2 for Eastern cultures), $x_{7km}$ (-1/2 for men in Western cultures and women in Eastern cultures, and 1/2 for women in Western cultures and men in Eastern cultures), $x_{8lm}$ (-1/2 for anger in Western cultures and sadness in Eastern cultures, and 1/2 for sadness in Western cultures and anger in Eastern cultures), and $x_{9klm}$ (-1/2 for sad women and angry men in Western cultures and angry women and sad men in Eastern cultures, and 1/2 for angry women and sad men in Western cultures and sad women and angry men in Eastern cultures). 
+
+The ordinal constraints are again put on the cell means, rather than on the parameters. Specifically, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the sad women condition needs to be higher than the cell mean of the angry women condition. 
+Cell means are calculated using the estimated parameters; for the sad women in Western cultures condition, for instance, this results in the following: $Y_{\cdot \cdot 1 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta - 1/2 \zeta + 1/2 \xi + 1/2 \upsilon - 1/2 \omega$. 
+
+To satisfy the theoretical ordinal constraints, the following has to hold: 
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 2 1} > Y_{\cdot \cdot 1 1 1} \\
+Y_{\cdot \cdot 2 2 1} > Y_{\cdot \cdot 2 1 1} \\
+Y_{\cdot \cdot 1 1 2} > Y_{\cdot \cdot 1 2 2} \\
+Y_{\cdot \cdot 2 1 2} > Y_{\cdot \cdot 2 2 2}
+\end{aligned}
+\]
+
+5. Unconstrained model: all effects are included, without any ordinal constraints (this is the same model as in perspective 4).
+\[Y_{ijklm} \sim N(\alpha_i + x_{1k} \beta + x_{2l} \gamma + x_{3kl} \theta + x_{6m} \zeta + x_{7km} \xi + x_{8lm} \upsilon + x_{9klm} \omega, \sigma^2).\]
+
+
+\newpage
+## Additional Figures 
+
+```{r fig-main, eval = T, fig.cap="Descriptive plots of **A.** status conferral, **B.** competence, **C.** likeability, and **D.** hiring rates per target gender and emotion.", fig.width=8, fig.asp=.8}
+par(mfrow = c(2,2), mgp = c(2, .7, 0))
+
+apa_lineplot(data = plotdat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , main = "A. Status Conferral"
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "competence"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Competence Rating"
+             , main = "B. Competence"
+             , jit = .1
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "likeability"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Likeability"
+             , jit = .1
+             , main = "C. Likeability"
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "hiring"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Hiring Rate"
+             , jit = .1
+             , main = "D. Hiring Rates"
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+
+```
+
+```{r, "fig-manipulation", fig.width=6, fig.asp=.6, fig.cap="Manipulation checks."}
+
+par(mfrow=c(1,2))
+apa_lineplot(data = plotdat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("emotion")
+             , dv = "perc.anger"
+             , ylim = c(1, 7)
+             , xlab = "Target Emotion"
+             , ylab = "Perceived Anger"
+             , jit = .1)
+apa_lineplot(data = plotdat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("emotion")
+             , dv = "perc.sadness"
+             , ylim = c(1, 7)
+             , xlab = "Target Emotion"
+             , ylab = "Perceived Sadness "
+             , jit = .1)
+```
+
+```{r fig-rater, fig.cap="Status conferral per target gender, emotion, and rater gender.", fig.width=7.5, fig.asp=.4, fig.align="H"}
+par(mar = c(4,4,1,0))
+
+apa_lineplot(data = plotdat2
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion", "Rater")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , args_y_axis = list(at = c(1,6,11))
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+```
+
+```{r fig-student, fig.cap="Status conferral per target gender, emotion, and student status.", fig.width=7.5, fig.asp=.4, fig.align="H"}
+
+par(mar = c(4,4,1,0))
+
+dat.student$Student <- factor(dat.student$student, levels = c("adult","student"), labels = c("No", "Yes"))
+apa_lineplot(data = dat.student
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion", "Student")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , args_y_axis = list(at = c(1,6,11))
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "sad")))
+
+```
+
+
+```{r moderator-plots1, fig.height=18, fig.asp=1, fig.cap="Moderation effects of beliefs about gender equality on status conferral.", fig.align="H"}
+# Models for perspective 3: beliefs about gender inequality
+plotdat3$`Target Emotion` <- plotdat3$emotion
+
+# gender workplace 
+fit <- lm(status ~ bgw * gender * `Target Emotion`, data = plotdat3)
+p1 <- interact_plot(fit, pred = bgw, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Beliefs about Gender in the Workplace", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# sexist beliefs 
+fit <- lm(status ~ sb * gender * `Target Emotion`, data = plotdat3)
+p2 <- interact_plot(fit, pred = sb, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Sexist Beliefs", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+p1/p2 
+```
+
+
+```{r moderator-plots2, fig.height=18, fig.asp=1, fig.cap="Moderation effects of beliefs about gender equality on status conferral.", fig.align="H"}
+# news exposure
+fit <- lm(status ~ nes * gender * `Target Emotion`, data = plotdat3)
+p3 <- interact_plot(fit, pred = nes, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "News Exposure Scale", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ im * gender * `Target Emotion`, data = plotdat3)
+p4 <- interact_plot(fit, pred = im, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Internal Motivation Not to Be Sexist", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+p3/p4
+```
+
+```{r moderator-plots3, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# news exposure
+fit <- lm(status ~ em * gender * `Target Emotion`, data = plotdat3)
+p5 <- interact_plot(fit, pred = em, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "External Motivation Not to Appear Sexist", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ studies * gender * `Target Emotion`, data = plotdat3)
+p6 <- interact_plot(fit, pred = studies, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Number of Research Studies Participated in", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(-2,0,2), limits=c(-2.5,2.5), labels = c("None","Some","Many")) + theme_apa()
+
+p5/p6
+```
+
+```{r moderator-plots4, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# similar study
+plotdat3$Emotion <- plotdat3$emotion
+fit <- lm(status ~ similar * gender * Emotion, data = plotdat3)
+p7 <- cat_plot(fit, pred = similar, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Participated in Similar Study", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_discrete(breaks = c(1,2), limits=c(1,2), labels = c("Yes","No")) + theme_apa()
+
+# psychology course taken
+fit <- lm(status ~ psy * gender * Emotion, data = plotdat3)
+p8 <- cat_plot(fit, pred = psy, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Taken Psychology Course", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_discrete(breaks = c(1,2), limits=c(1,2), labels = c("Yes","No")) + theme_apa()
+
+p7/p8
+```
+```{r moderator-plots5, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# gender awareness
+fit <- lm(status ~ aware.gender * gender * `Target Emotion`, data = plotdat3)
+p9 <- interact_plot(fit, pred = aware.gender, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Awareness of Target Gender", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,5,9), limits=c(1,9)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ aware.emotion * gender * `Target Emotion`, data = plotdat3)
+p10 <- interact_plot(fit, pred = aware.emotion, modx = gender, mod2 = `Target Emotion`, interval = T, int.width = .95
+              , x.label = "Awareness of Target Emotion", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,5,9), limits=c(1,9)) + theme_apa()
+
+p9/p10
+```
+

@@ -1,0 +1,2016 @@
+---
+title             : "Bayesian Analysis for the Gender, Status, and Emotions Project - Study 2"
+shorttitle        : ""
+
+author: 
+  - name          : "Suzanne Hoogeveen"
+    affiliation   : "1"
+    corresponding : yes    # Define only one corresponding author
+    email         : "suzanne.j.hoogeveen@gmail.com"
+    address       : ""
+  - name          : "Julia M. Haaf"
+    affiliation   : "1"
+
+affiliation:
+  - id            : "1"
+    institution   : "University of Amsterdam"
+
+note: Version 3, 01/2022
+
+abstract: "" 
+  
+keywords          : ""
+
+bibliography      : ["MyBibs.bib","r-references.bib"]
+
+header-includes   :
+   - \usepackage{bm}
+   - \usepackage{amsmath}
+   - \usepackage{setspace}
+   - \usepackage{mathtools}
+   - \usepackage{marginnote}
+   - \newcommand{\readme}[1]{\emph{\marginnote{Julia} (#1)}}
+   - \newcommand{\readmoi}[1]{\emph{\marginnote{Suzanne} (#1)}}
+   
+figsintext        : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+lineno            : no
+mask              : false
+urlcolor          : blue
+
+lang              : "english"
+class             : man
+output            : papaja::apa6_pdf
+#output            : papaja::apa6_word
+csl               : apa6.csl
+---
+\newcommand{\calM}{\mathcal M}
+\newcommand{\calH}{\mathcal H}
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(cache = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(cache.extra = 2021)
+knitr::opts_chunk$set(dev=c('png','postscript'))
+
+library("BayesFactor")
+library("dplyr")
+library("kableExtra")
+library("scales")
+library("papaja")
+library("interactions")
+library("ggplot2")
+library("patchwork")
+
+source("helpFunctions.R")
+source("helpFunctionsS2.R")
+```
+
+```{r refs, cache=F}
+#r_refs(file = "r-references.bib", append = F)
+my_citations <- cite_r(file = "r-references.bib")
+```
+
+# Methods
+
+```{r data}
+# Do once: save anonymized version of the data including only relevant variables for the analyses. 
+#data  <- read.csv2('data/EmotionalExpressionStudy2_5.csv', header=T)
+#mydata <- data[!grepl('Click|Submit|X9', colnames(data))] #remove timing items 
+#mydata <- mydata[!mydata$Condition=="",-c(2:18)] #remove rows of people who did not complete the study and irrelevant columns 
+#write.csv(mydata, file="data/EmotionExpressionStudy2Anonymous2.csv", row.names = F)
+
+data <- read.csv("data/EmotionExpressionStudy2Anonymous2.csv", header=T)
+
+# relevant variables: 
+# status: Status.1 (no responses here??)
+# target: Gender.Condition
+# emotion: Emotion.Condition
+# site: UserID
+
+#site <- data$UserID
+
+# create composite for status 
+status <- rowMeans(data[,c('Status_DV','Power','Independence')])
+
+target_emotion <- case_when(
+  grepl("a|b", data$Condition) ~ "angry",
+  grepl("c|d", data$Condition) ~ "neutral"
+)
+target_gender <- case_when(
+  grepl("a|c", data$Condition) ~ "female",
+  grepl("b|d", data$Condition) ~ "male"
+)
+condition <-  as.numeric(gsub('[^0-9.]','', data$Condition))
+
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+plotdat <- dat
+```
+
+## Participants
+
+For the primary analyses, we included the full sample of `r nrow(dat)` participants who completed the relevant measures for the main analyses. 
+
+## Material
+```{r reliability-scales}
+NES <- data[,paste0("NES",1:6)]
+IM  <- data[,paste0("IM_Non_Sex",1:3)]
+EM  <- data[,paste0("EM_Non_Sex",1:3)]
+BGW <- data[,paste0("BGenWorkplace",1:5)]
+SB  <- data[,paste0("Sexist_Beliefs",1:3)]
+
+# alpha for the scales   
+nes.a <- psych::alpha(NES)$total$std.alpha
+im.a  <- psych::alpha(IM)$total$std.alpha
+em.a  <- psych::alpha(EM)$total$std.alpha
+bgw.a <- psych::alpha(BGW)$total$std.alpha
+sb.a  <- psych::alpha(SB)$total$std.alpha
+
+# correlation between items for composite
+temp <- na.omit(data[,c('Power','Independence','Status_DV')])
+iic1 <- mean(c(cor(temp[,1],temp[,2]),cor(temp[,1],temp[,3]),cor(temp[,2],temp[,3])))
+temp <- na.omit(data[,c('Competent','Kowledgeable')])
+iic2 <- cor(temp[,1],temp[,2])
+temp <- na.omit(data[,c('Not_Like','Warm')])
+iic3 <- cor(temp[,1],temp[,2])
+```
+
+The dependent variable 'status conferral' was created by averaging responses to the items on *power*, *independence*, and *status* (average inter-item correlation: `r iic1`). The dependent variable 'competence' was created by averaging responses to the items on *competence* and *knowledgeability* (inter-item correlation: `r iic2`). The dependent variable 'warmth' was created by averaging responses to the items on *likeability* and *warmth* (inter-item correlation: `r iic3`). 
+
+As preregistered, we assessed the reliablity of the individual differences scale by calculating Cronbach's alpha. All five scales were internally consistent and surpassed the threshold of alpha > 0.4; the alpha values were `r nes.a` (news exposure scale), `r im.a` (internal motivation not to be sexist), `r bgw.a` (beliefs about gender inequality in the workplace), `r sb.a` (sexist beliefs), and `r em.a` (external motivation not to appear sexist). 
+The variable *number of studies previously participated in* was heavily right-skewed and was therefore binned into 6 groups: "0", "1-2", "3-5", "6-10", "11-20", "20+". 
+
+## Procedure
+
+## Data analysis
+
+All analyses were conducted in R.
+We constructed hierarchical Bayesian regression models that reflect the predictions from the 5 substantive theories, as well as the null-model and an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. Note that as perspectives 3 and 4 make equal predictions regarding the overall pattern, there were 4 different theoretical models in total. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see Appendix for details). The relative predictive adequacy of these models as well as the unconstrained model was compared using Bayes factors, following the approach by @haaf2017developing, @rouder2019beyond and @haaf2018capturing. 
+
+In addition, we assessed the robustness of the findings to somewhat arbitrary analysis decisions by conducting a multiverse analysis [@steegen2016]: We intended to apply different data exclusion criteria related to language experience, a manipulation check, the validity of responses (straightlining on the included scales), perceived material quality, mode of administration (laptop, phone etc.), and a design-level manipulation check. However, as described below, straightlining criteria did not affect a substantial proportion of the sample (less than 2%) and was thus omitted as a separate path in the multiverse analysis. The preregistration for the analysis can be found at \url{https://osf.io/sh3vx/}. 
+
+__*Prior settings.*__ We think small effects in the predicted direction may still be meaningful, especially with regard to gender bias where small biases can accumulate in terms of their consequences over time. We therefore used a scale of 0.25 for the effect of interest. A scale of 0.25 assumes an size effect that is 25% of the sampling noise (standard deviation), which is generally considered a small effect. For the variation between labs in the intercepts, we used a scale of 1. In the random-effects models we used a scale of 0.15 for site-specific variation in the effects of interest. 
+
+# Results
+
+## Manipulation check 
+
+
+```{r, "manipulation-check"}
+man_dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  perc.sadness = data$Q372_1)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(man_dat) | man_dat == ""
+good=apply(badMat,1,mean)==0
+man_dat=man_dat[good,]
+
+# remove labs with fewer than 3 observations 
+man_dat <- man_dat[man_dat$site %in% names(which(table(man_dat$site) > 2)),]
+
+man_dat$emotion <- as.factor(man_dat$emotion)
+man_dat$gender <- as.factor(man_dat$gender)
+# renumber site indicators (for multilevel models) 
+man_dat$site <- as.numeric(as.factor(man_dat$site))
+man_dat <- arrange(man_dat, site) 
+
+mc.anger <- as.vector(ttestBF(formula = perc.anger ~ emotion, data = man_dat, nullInterval = c(0,Inf)))[1]
+samp.mc.anger <- ttestBF(formula = perc.anger ~ emotion, data = man_dat, posterior=T, iterations=5000)
+mc.sadness <- as.vector(ttestBF(formula = perc.sadness ~ emotion, data = man_dat, nullInterval = c(-Inf,0)))[1]
+samp.mc.sadness <- ttestBF(formula = perc.sadness ~ emotion, data = man_dat, posterior=T, iterations=5000)
+```
+
+As a manipulation check, we assessed whether the target in the *anger* condition was indeed perceived as more angry than the target in the *not-angry* (neutral or sadness) condition and vice versa for sadness. 
+The independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with anger expressions are perceived as more angry than targets with not-angry (sadness or neutral) expressions (BF$_{+0} = \infty$, $\delta$ = `r printnum(median(samp.mc.anger[,"delta"]))`). Similarly, the independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with not-angry expressions are perceived as more sad than targets with angry expressions (BF$_{-0} = \infty$, $\delta$ = `r printnum(median(samp.mc.sadness[,"delta"]))`). See Figure \@ref(fig:fig-manipulation) for a plot of the data. 
+
+
+## Primary Theoretical Tests
+
+```{r status-analysis, cache=T}
+rscale <- c("main" = 1/4, "int" = 1/4, "rand" = 1, "var" = .15)
+bayes.status <- doBayes(dat, dat$status, rscale)
+
+bfs.status <- bayes.status$bfsu
+bfs0.status <- bayes.status$bfs0
+bfsb.status <- bayes.status$bfsb[1:5]
+
+diff.emo.men <- bayes.status$musm[,"muam"] - bayes.status$musm[,"musm"]
+diff.emo.women <- bayes.status$musm[,"muaw"] - bayes.status$musm[,"musw"]
+
+modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+
+# get BFs for status signalling vs other models
+bfss.status <- bfs.status[4]/bfs.status
+bfss.status <- c(bfss.status[c(3,5)],bfs.status[4],bfss.status[c(2,1)])
+```
+
+```{r tab-status, eval=FALSE}
+modnames <- c("Status Signalling vs. Gender Stereotyping", "Status Signalling vs. Culture Change/Study Savviness",
+              "Status Signalling vs. Unconstrained", "Status Signalling vs. Designs", "Status Signalling vs. Null")
+
+
+tab <- data.frame(Comparison = modnames, BFs = myformat(bfss.status))
+row.names(tab) <- NULL
+
+apa_table(tab,
+          align = c("l","c"),
+          col.names = c("Comparison","Bayes factor"),
+          escape = F,
+          caption = "Evidence for the theoretical models vs. the Status Signalling model (i.e., the winning model).", 
+          note = "The Bayes factors reflect the evidence in favor of the Status Signallling perspectives versus the other models. Note that the Baseline model   includes random intercepts for labs and for designs, while the null model only includes random intercepts for labs.")
+
+```
+
+__*Status Conferral.*__
+Based on the Bayes factor model comparison, for status conferral we find most evidence in favor of the baseline model that assumes a varying intercept per site and a varying intercept per design, but no experimental effects (i.e., no main effect of target gender, target emotion or a gender-by-emotion interaction). Specifically, the baseline model outperforms the Gender Stereotyping model by a factor of `r myformat(1/bfsb.status[1])`, the Status Signalling perspective by a factor of `r myformat(1/bfsb.status[2])`, and the Culture Change/Study Savviness model (reversed gender stereotyping) by a factor of `r myformat(1/bfsb.status[3])`, which is considered strong evidence against the theoretical perspectives [@LeeWagenmakersBayesBook]. Finally, the baseline model fits the data much better than the null model (BF$_{b0}=$ `r myformat(1/bfsb.status[5])`), indicating that the overall status ratings differ across designs. Figure \@ref(fig:fig-main)A visualizes the absence of experimental effects. 
+
+```{r other-dvs-analysis, cache=T}
+# recode competence and create composite 
+competence <- 12 - rowMeans(data[,c('Competent','Kowledgeable')])
+warmth <- rowMeans(data[,c('Not_Like','Warm')])
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  competence = competence,
+                  warmth = warmth,
+                  control = data$InControl)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+
+bayes.competence <- doBayes(dat, dat$competence, rscale)
+bayes.warmth <- doBayes(dat, dat$warmth, rscale)
+bayes.control <- doBayes(dat, dat$control, rscale)
+
+dat.dvs <- dat
+```
+
+```{r mediation, cache=TRUE, eval=FALSE}
+library(brms)
+f1 <- bf(warmth ~ 1 + emotion)
+f2 <- bf(competence ~ 1 + emotion)
+f3 <- bf(status ~ 1 + warmth + competence + emotion)
+m1 <- brm(f3 + f1 + f2 + set_rescor(FALSE), data = dat.dvs)
+
+post <- posterior_samples(m1)
+
+post <-
+  post %>% 
+  mutate(`a1 emotion-warmth` = b_warmth_emotionneutral,
+         `a2 emotion-competence` = b_competence_emotionneutral,
+         `b1 warmth-status` = b_status_warmth,
+         `b2 competence-status`= b_status_competence,
+         `c_prime emotion-status total direct effect`= b_status_emotionneutral) %>% 
+  mutate(`a1b1 emotion-warmth-status`= `a1 emotion-warmth` * `b1 warmth-status`,
+         `a2b2 emotion-competence-status`= `a2 emotion-competence` * `b2 competence-status`) %>% 
+  mutate(`c total effect`    = `c_prime emotion-status total direct effect` + `a1b1 emotion-warmth-status` + `a2b2 emotion-competence-status`,
+         `total indirect effect` = `a1b1 emotion-warmth-status` + `a2b2 emotion-competence-status`) 
+
+library(tidyr)
+library(ggthemes)
+library(tidybayes)
+
+post %>% 
+  pivot_longer(cols = `a1 emotion-warmth`:`total indirect effect`) %>%
+  group_by(name) %>% 
+  median_qi(value) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+```{r fig-main, eval = T, fig.cap="Descriptive plots of **A.** status conferral, **B.** competence, **C.** warmth, and **D.** Out of control per target gender and emotion.", fig.width=8, fig.asp=.8}
+par(mfrow = c(2,2), mgp = c(2, .7, 0)+0.1)
+
+apa_lineplot(data = plotdat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , main = "A. Status Conferral"
+             , args_legend = list(x = 1, y = 11.5
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "competence"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Competence Rating"
+             , main = "B. Competence"
+             , jit = .1
+             , args_legend = list(x = 1, y = 11.5
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "warmth"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Warmth Rating"
+             , jit = .1
+             , main = "C. Warmth"
+             , args_legend = list(x = 1, y = 11.5
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+apa_lineplot(data = dat.dvs
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion")
+             , dv = "control"
+             , ylim = c(1, 11)
+             , args_y_axis = list(at = c(1,6,11))
+             , xlab = "Gender Condition"
+             , ylab = "Out-of-control Rating"
+             , jit = .1
+             , main = "D. Out of Control"
+             , args_legend = list(x = 1, y = 11.5
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+
+```
+
+__*Competence.*__ For competence ratings, we find most evidence for the unconstrained model, which strongly outperforms the baseline model: BF$_{ub}=$ `r myformat(bayes.competence$bfsb[4])`. The pattern of results shows that, in contrast to the Status Signalling and Gender Stereotyping perspectives, both angry men ($M_{angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`) and women ($M_{angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="angry"], na.rm=T),2)`) are considered *less* competent than neutral/sad men ($M_{not-angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`) and women ($M_{not-angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="neutral"], na.rm=T),2)`; see also Figure \@ref(fig:fig-main)B). 
+
+__*Warmth.*__
+As expected, for perceived warmth, we find most evidence for the 'Anger suppresses warmth' perspective; angry targets ($M_{angry\ male}=$ `r round(mean(dat$warmth[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`, $M_{angry\ female}=$ `r round(mean(dat$warmth[dat$gender=="female"&dat$emotion=="angry"], na.rm=T),2)`) are perceived as less warm than sad/neutral targets ($M_{not-angry\ male}=$ `r round(mean(dat$warmth[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`, $M_{not-angry\ female}=$ `r round(mean(dat$warmth[dat$gender=="female"&dat$emotion=="neutral"], na.rm=T),2)`) , regardless of gender: BF$_{wb}=$ `r myformat(bayes.warmth$bfsb[6])` (see also Figure \@ref(fig:fig-main)C). 
+
+__*Out of Control.*__
+For the out-of-control ratings, we expected most evidence for the Gender Stereotyping model such that anger increases out-of-control ratings for female targets, compared to non-angry targets and angry male targets. The results, however, showed most evidence for the Status Signalling perspective; BF$_{sb}=$ `r myformat(bayes.control$bfsb[2])`: both angry men ($M_{angry\ male}=$ `r round(mean(dat$control[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`) and women ($M_{angry\ female}=$ `r round(mean(dat$control[dat$gender=="female"& dat$emotion=="angry"], na.rm=T),2)`) are considered more out of control than not-angry men ($M_{not-angry\ male}=$ `r round(mean(dat$control[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`) and women ($M_{not-angry\ female}=$ `r round(mean(dat$control[dat$gender=="female"& dat$emotion=="neutral"], na.rm=T),2)`; see Figure \@ref(fig:fig-main)D). 
+
+```{r table-all}
+bfs0.competence <- c(bayes.competence$bfsb[1:5],0)
+bfs0.warmth <- bayes.warmth$bfsb
+bfs0.control <- c(bayes.control$bfsb[1:5],0)
+
+makeLargestBold <- function(bfs){
+  largest <- which(bfs == max(bfs))
+  bfs.print <- myformat(bfs)
+  if(max(bfs)>1){
+    bfs.print[largest] <- ifelse(bfs[largest]>99999,paste0("\\bm{",bfs.print[largest],"}"),paste0("\\textbf{",bfs.print[largest],"}"))
+  }
+  return(bfs.print)
+}
+
+apa_table(data.frame(Comparison = names(bfs0.warmth), 
+                     Status = c(makeLargestBold(bayes.status$bfsb)[1:5],"--"), 
+                     Competence = c(makeLargestBold(bfs0.competence)[1:5],"--"), 
+                     Warmth = makeLargestBold(bfs0.warmth), 
+                     `Out of control` = c(makeLargestBold(bfs0.control)[1:5],"--")),
+          col_spanners = list(`Bayes Factors` = c(2,5)),
+          col.names = c("Comparison", "Status","Competence","Warmth","Out of Control"),
+          row.names = FALSE,
+          align = c("l","c","c","c","c"),
+          caption = "Evidence for the theoretical models vs. the baseline (intercepts only) models for the different dependent variables. ", 
+          escape=F,
+          note = "The best-predicting model per dependent variable is indicated in bold. For status conferral, all of the theoretical models perform worse than the baseline model. Note that the baseline model includes random intercepts for labs and for designs, while the null model only includes random intercepts for labs.")
+```
+
+## Primary Methodological Tests
+
+__*Varying effects model.*__ For the primary analyses, we constructed simple common effect models that assume that the effects of interest are of equal size across different designs. As preregistered, we also investigated whether the effects differ substantially per design, and if so what design-related features could explain the pattern. To this end, we built a varying effects model that allows the main effects of target gender and target emotion, as well as the interaction, to vary between designs. Note that we did not investigate random effects across sites, as study 1 indicated no evidence in favor of variability across labs.
+
+```{r varying-model, cache=T}
+designs <- dat %>% group_by(design) %>% summarize(design = design[1])
+designs <- designs$design
+# varying effects model (target gender and emotion effects)
+bayes.re <- doRandom(dat, dat$status, rscale)
+```
+
+```{r varying-models-dvs, cache=T}
+bayes.re.comp <- doRandom(dat.dvs, dat.dvs$competence, rscale)
+bayes.re.warm <- doRandom(dat.dvs, dat.dvs$warmth, rscale)
+bayes.re.cont <- doRandom(dat.dvs, dat.dvs$control, rscale)
+```
+
+```{r varying-details}
+# more details target gender effect
+m <- apply(bayes.re$betas, 2, mean)
+q <- apply(bayes.re$betas, 2, quantile, c(.025,.975))
+des.female <- which(q[2,]<0)
+des.male <- which(q[1,]>0)
+q <- apply(bayes.re$gammas, 2, quantile, c(.025,.975))
+n.angry.stat <- which(q[1,]>0)
+n.nonangry.stat <- which(q[2,]<0)
+```
+
+As visualized in Figure \@ref(fig:plotter), however, there is no indication that the target emotion effect and the gender-by-emotion interaction effect vary substantially of systematically across designs. Rather, the 95% credible intervals includes zero across almost all designs for the main effect of target emotion, as well as the interaction effect. For the target emotion effect, angry targets are accorded more status than non-angry targets across `r length(n.angry.stat)` designs, while the opposite is true for `r length(n.nonangry.stat)` design. For the target gender effect, there are `r length(des.male)+length(des.female)` designs for which the coefficient of the target gender effect does not include 0. Across those designs, male targets are accorded higher status than female targets (regardless of emotion condition) for `r length(des.male)` designs and females are accorded higher status than males for `r length(des.female)` design. See Figure \@ref(fig:plotter) which designs show these effects. Corroborating the visual pattern, the Bayes factor analysis suggests that the unconstrained random effects model strongly outperforms the baseline-model that includes only varying intercepts for site and design; BF$_{rb}=$ `r myformat(1/bayes.re$BF_br)`. Note however, that the pattern of between design variation in the size and direction of the target gender effect is not predicted by any of the theoretical models. 
+
+```{r varying-details-dvs}
+# more details target emotion effect
+q <- apply(bayes.re.comp$gammas, 2, quantile, c(.025,.975))
+n.nonangry.comp <- which(q[2,]>0)
+q <- apply(bayes.re.comp$betas, 2, quantile, c(.025,.975))
+n.female.comp <- which(q[2,]<0)
+# warmth
+q <- apply(bayes.re.warm$gammas, 2, quantile, c(.025,.975))
+n.nonangry.warm <- which(q[2,]<0)
+q <- apply(bayes.re.warm$betas, 2, quantile, c(.025,.975))
+n.female.warm <- which(q[2,]<0) 
+n.male.warm <- which(q[1,]>0) 
+q <- apply(bayes.re.warm$thetas, 2, quantile, c(.025,.975))
+n.stereo.warm <- which(q[1,]>0) 
+# out of control
+q <- apply(bayes.re.cont$gammas, 2, quantile, c(.025,.975))
+n.angry.cont <- which(q[1,]>0)
+```
+
+Figure \@ref(fig:plotter-comp) shows the intercepts and varying effects across design for competence ratings as the outcome measure. In line with the Bayes factor analysis providing most evidence for the unconstrained model, the pattern in panel C displays a *negative* effect of anger vs. non-anger across `r length(n.nonangry.comp)` designs (i.e., an effect opposite to predictions by the Status Signalling perspective). None of the designs show a target gender effect or a gender-by-emotion interaction effect. As predicted by the 'Anger suppresses warmth' perspective, a similar pattern emerges for perceived warmth in Figure \@ref(fig:plotter-warmth): across `r length(n.nonangry.warm)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with non-angry targets considered warmer than angry targets. In addition, across `r length(n.female.warm)` designs, female targets are considered warmer than male targets, while for `r length(n.male.warm)` designs, male targets are considered warmer than female targets. Finally, in `r length(n.stereo.warm)` designs, a gender stereotype effect is observed such that an angry male target is considered warmer than a non-angry male targets and an angry female target, while an angry female target is considered less warm than a non-angry female target and an angry male target. 
+For out-of-control ratings, a reverse pattern for the target emotion effect is shown in Figure \@ref(fig:plotter-control): across `r length(n.angry.cont)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with angry targets considered more out of control than non-angry targets. 
+
+```{r plotter, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on status conferral, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. Only the target gender effect seem to differ from zero for some designs."}
+par(mfrow=c(2,2))
+J <- length(unique(designs))
+colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
+plotter(bayes.re$alphas, c(4,9),  designs, colors, main = "A. Overall Status Conferral", labs = c("Low","High"))
+plotter(bayes.re$betas,  c(-1.5,1.5), designs, colors, main = "B. Target Gender Effect", labs = c("Female","Male"), effectcolors = TRUE)
+plotter(bayes.re$gammas, c(-1.5,1.5), designs, colors, main = "C. Target Emotion Effect", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
+
+```
+
+```{r plotter-comp, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on competence, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. A target emotion effect emerges across about half of the designs, yet in the direction opposite as predicted by the Status Signalling perspective."}
+par(mfrow=c(2,2))
+J <- length(unique(designs))
+colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
+plotter(bayes.re.comp$alphas, c(4,10),  designs, colors, main = "A. Overall Competence Ratings", labs = c("Low","High"))
+plotter(bayes.re.comp$betas,  c(-1.5,1.5), designs, colors, main = "B. Target Gender Effect", labs = c("Female","Male"), effectcolors = TRUE)
+plotter(bayes.re.comp$gammas, c(-2,2), designs, colors, main = "C. Target Emotion Effect", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re.comp$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
+```
+
+```{r plotter-warmth, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on warmth, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Anger Suppresses Warmth perspective, a target emotion effect emerges across most designs."}
+par(mfrow=c(2,2))
+J <- length(unique(designs))
+colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
+plotter(bayes.re.warm$alphas, c(2,8),  designs, colors, main = "A. Overall Perceived Warmth", labs = c("Low","High"))
+plotter(bayes.re.warm$betas,  c(-1.5,1.5), designs, colors, main = "B. Target Gender Effect", labs = c("Female","Male"), effectcolors = TRUE)
+plotter(bayes.re.warm$gammas, c(-4,1), designs, colors, main = "C. Target Emotion Effect", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re.warm$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
+```
+
+```{r plotter-control, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on out-of-control ratings, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Status Signalling perspective, a target emotion effect emerges across about half of the designs."}
+par(mfrow=c(2,2))
+J <- length(unique(designs))
+colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
+plotter(bayes.re.cont$alphas, c(2,8),  designs, colors, main = "A. Overall Out-of-Control Ratings", labs = c("Low","High"))
+plotter(bayes.re.cont$betas,  c(-1.5,1.5), designs, colors, main = "B. Target Gender Effect", labs = c("Female","Male"), effectcolors = TRUE)
+plotter(bayes.re.cont$gammas, c(-1,3), designs, colors, main = "C. Target Emotion Effect", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re.cont$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
+```
+
+```{r plotter-combined, fig.width=6.5, fig.asp=1.4, fig.cap="Estimated design-level effects (posterior means), in increasing order. \\textbf{A.} Target gender effect on status conferral. \\textbf{B.} Target emotion effects on status conferral. \\textbf{C.} Target gender-by-emotion interaction effect on status conferral. \\textbf{D.} Target emotion effects on warmth. \\textbf{E.} Target emotion effect on competence. \\textbf{F.} Target emotion effect on out-of-control ratings. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red."}
+par(mfrow=c(3,2))
+plotter(bayes.re$betas,  c(-1.5,1.5), designs, colors, main = "A. Target Gender Effect on Status Conferral", labs = c("Female","Male"), effectcolors = TRUE)
+plotter(bayes.re$gammas, c(-1.5,1.5), designs, colors, main = "B. Target Emotion Effect on Status Conferral", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re$thetas, c(-1.5,1.5), designs, colors, main = "C. Gender-by-Emotion Effect on Status Conferral", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
+plotter(bayes.re.warm$gammas, c(-4,1), designs, colors, main = "D. Target Emotion Effect on Warmth", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re.comp$gammas, c(-2,2), designs, colors, main = "E. Target Emotion Effect on Competence", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+plotter(bayes.re.cont$gammas, c(-1,3), designs, colors, main = "F. Target Emotion Effect on Out-of-Control Ratings", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
+
+```
+
+```{r plot-design-moderators, fig.width=6.5, fig.asp=1.4, fig.cap="Varying effect of target gender per design, colored based on design-related moderators."}
+colors_mod <- RColorBrewer::brewer.pal(3, "Dark2")
+
+par(mfrow=c(3,2))
+
+#for comparison conditions
+sad.cond <- c(1,7,8,10,17,18,23,24,27)
+cols.1 <- ifelse(designs %in% sad.cond, colors_mod[1], colors_mod[2])
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.1, main = "A. Comparison Condition", labs = c("Female","Male"), leg = c("sadness","neutral"))
+
+#for format 
+video <- c(2,15,16,19:26)
+audio <- c(11:14,17,18)
+cols.2 <- ifelse(designs %in% video, colors_mod[1], colors_mod[3])
+cols.2 <- ifelse(designs %in% audio, colors_mod[2], cols.2)
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.2, main = "B. Format", labs = c("Female","Male"), leg = c("other (comic/scenario)","video","audio"))
+
+#for gender manipulation
+visual <- c(1,2,10:26)
+cols.3 <- ifelse(designs %in% visual, colors_mod[1], colors_mod[2])
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.3, main = "C. Manipulation of Gender", labs = c("Female","Male"), leg = c("visual\n(actors/characters)\n","written\n(names/pronouns etc.)"))
+
+#for anger manipulation
+tone <- c(2,3,11,12,15,16,19,20,25,26)
+cols.4 <- ifelse(designs %in% tone, colors_mod[1], colors_mod[2])
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.4, main = "D. Manipulation of Anger", labs = c("Female","Male"), leg = c("other\n(content or rating)","vocal tone of delivery"))
+
+#for type of design
+orig <- 27
+adapt <- c(1:8)
+cols.5 <- ifelse(designs %in% orig, colors_mod[1], colors_mod[3])
+cols.5 <- ifelse(designs %in% adapt, colors_mod[2], cols.5)
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.5, main = "E. Type of Design", labs = c("Female","Male"), leg = c("adapted","novel","original"))
+
+#anger extremity
+mod.anger <- c(7,11,13,15,17,19,21,23,25)
+ext.anger <- c(8,12,14,16,18,20,22,24,26)
+cols.6 <- ifelse(designs %in% mod.anger, colors_mod[1], "white")
+cols.6 <- ifelse(designs %in% ext.anger, colors_mod[2], cols.6)
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.6, main = "E. Extremity of Anger", labs = c("Female","Male"), leg = c("","mildly angry","extremely angry"))
+
+```
+
+For status conferral as the outcome variable, we further investigated to what extent the target gender effect might be explained by design-related moderators. 
+Based on visual inspection, it seems that only the format of the manipulation might have a systematic influence on the target gender effect. That is, when presented in a video, male targets might be accorded more status than female targets, whereas this effect is absent when presented as an audio recording or comic book or written scenario. 
+
+```{r test-format, cache=T}
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  perc.sadness = data$Q372_1)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+dat$format <- ifelse(dat$design %in% video, "video","other")
+dat$format <- as.factor(dat$format)
+
+dat$des <- as.factor(dat$design)
+bf.format <- anovaBF(status ~ gender*format*emotion + des, data = dat, whichRandom = "des", whichModels = "withmain")
+
+best <- which(as.vector(bf.format) == max(as.vector(bf.format)))
+bf.gen.format <- as.vector(bf.format)[best]/as.vector(bf.format)[6]
+
+dat.vid <- dat[dat$format=="video",]
+dat.oth <- dat[dat$format=="other",]
+bf.gen.vid <- as.vector(ttestBF(formula = status ~ gender, dat = dat.vid))[1]
+bf.gen.oth <- as.vector(ttestBF(formula = status ~ gender, dat = dat.oth))[1]
+```
+
+In order to further unpack this potential effect of format, we conducted a Bayesian ANOVA with gender and format as factors plus their interaction. Indeed, we find that the data provide most evidence for the model that includes the factors gender and format, plus their interaction. Comparing the models with and without this interaction term gives a Bayes factor of `r myformat(bf.gen.format)` in favor or the gender-by-format interaction. As seen in Figure \@ref(fig:plot-design-moderators)B, the video format particularly increases status conferral to male targets. Indeed, if we look at designs with a video format and other designs separately, we find evidence in favor of a gender effect for video designs BF$_{10}=$ `r myformat(bf.gen.vid)` and evidence against a gender effect for the other designs (audio, scenarios, comic book): BF$_{10}=$ `r myformat(bf.gen.oth)`; BF$_{01}=$ `r myformat(1/bf.gen.oth)`. 
+
+
+```{r anger-extremity, cache=TRUE}
+dat_sub <- subset(dat, design %in% c(mod.anger,ext.anger) & emotion == "angry")
+dat_sub$extremity <- ifelse(dat_sub$design %in% mod.anger, "mild","extreme")
+dat_sub$extremity <- as.factor(dat_sub$extremity)
+
+bf.anger.extr  <- as.vector(ttestBF(formula = status ~ extremity, data = dat_sub, nullInterval = c(-Inf,0)))[1]
+
+#renumber designs and sites
+dat_sub$design_num <- dat_sub$design
+dat_sub$design <- as.numeric(as.factor(dat_sub$design))
+dat_sub$site <- as.numeric(as.factor(dat_sub$site))
+bayes.extremity.rand <- doRandomExtremity(dat_sub, dat_sub$status, rscale)
+```
+
+__*Anger Extremity Hypothesis A.*__ We predicted that moderate levels of anger would lead to more status conferral than extreme anger for both targets. To this end, we compared status conferral to angry targets between designs that were identical except for the extremity of the displayed anger. 
+However, the data indicated that mild anger led to *less* status conferral compared to extreme anger ($M_{mild}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="mild"]),2)`); $M_{extreme}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="extreme"]),2)`). As the effect went in the opposite direction, the Bayes factor analysis also provided evidence against the anger extremity hypothesis: BF$_{10}=$ `r myformat(bf.anger.extr)`; BF$_{01}=$ `r myformat(1/bf.anger.extr)`. 
+
+## Secondary Theoretical Tests 
+
+As preregistered, we tested several additional effects and conducted relevant analyses. 
+
+```{r cultural-data}
+# assertiveness site
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  assert_sp_site = data$UserID_Assert_SP,
+                  assert_sv_site = data$UserID_Assert_SV)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+dat.assert.site <- dat 
+
+# disagreement site
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  disagree_site = data$UserID_Disagreeing)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+dat.disagree.site <- dat 
+
+# assertiveness country 
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  assert_sp_coun = data$Country_Assert_SP,
+                  assert_sv_coun = data$Country_Assert_SV)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+dat.assert.coun <- dat 
+
+# disagreement country 
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  disagree_coun = data$Country_Disagreeing)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+dat.disagree.coun <- dat 
+```
+
+```{r cultural-analyses, cache=T}
+# assertiveness values country location of the lab (higher assertiveness related to stronger emotion effect)
+bayes.val.site <- doBayesCultural(dat.assert.site, dat.assert.site$status, rscale, dat.assert.site$assert_sv_site, pos=T)
+# assertiveness practices country location of the lab (higher assertiveness related to stronger emotion effect)
+bayes.prac.site <- doBayesCultural(dat.assert.site, dat.assert.site$status, rscale, dat.assert.site$assert_sp_site, pos=T)
+# disagreement country location of the lab (higher disagreement related to stronger emotion effect)
+bayes.disagree.site <- doBayesCultural(dat.disagree.site, dat.disagree.site$status, rscale, dat.disagree.site$disagree_site, pos=T)
+
+# assertiveness values indicated country (higher assertiveness related to stronger emotion effect)
+bayes.val.coun <- doBayesCultural(dat.assert.coun, dat.assert.coun$status, rscale, dat.assert.coun$assert_sv_coun, pos=T)
+# assertiveness practices indicated country (higher assertiveness related to stronger emotion effect)
+bayes.prac.coun <- doBayesCultural(dat.assert.coun, dat.assert.coun$status, rscale, dat.assert.coun$assert_sp_coun, pos=T)
+# disagreement indicated country (higher disagreement related to stronger emotion effect)
+bayes.disagree.coun <- doBayesCultural(dat.disagree.coun, dat.disagree.coun$status, rscale, dat.disagree.coun$disagree_coun, pos=T)
+```
+
+
+__*Cultural Differences.*__ The cultural differences perspective predicts that anger may have positive effects in confrontation (disagreement/assertiveness) oriented cultures but negative effects in more harmony-oriented cultures. This translates into an interaction such that with increased cultural harmony-scores, the positive effect of anger decreases or becomes negative (i.e., a negative interaction coefficient). We tested the effect of the culture dimension as well as the interaction between culture dimension and target emotion on status conferral across 6 different operationalisations of the culture dimension: assertiveness values ratings of the lab's location and of the participants' indicated country of residence, assertiveness practices ratings of the lab's location and of the participants' indicated country of residence, and disagreement scores of the lab's location and of the participants' indicated country of residence. As shown in Table \@ref(tab:culture-table), across all operationalisations, the null-model outperforms the culture dimension only model, the culture dimension plus target emotion model, and the culture dimension-by-target emotion interaction model (i.e., the model of interest). 
+
+```{r culture-table}
+bfs.val.site <- bayes.val.site$bfs0
+bfs.prac.site <- bayes.prac.site$bfs0
+bfs.disagree.site <- bayes.disagree.site$bfs0
+bfs.val.coun <- bayes.val.coun$bfs0
+bfs.prac.coun <- bayes.prac.coun$bfs0
+bfs.disagree.coun <- bayes.disagree.coun$bfs0
+
+modnames <- c("Null vs. Full.", "Null vs. Cult.Diff.", "Null vs. Main Eff.", "Null vs. Cult.Int")
+tab <- rbind(myformat(bfs.val.site), myformat(bfs.val.coun), 
+             myformat(bfs.prac.site), myformat(bfs.prac.coun),
+             myformat(bfs.disagree.site), myformat(bfs.disagree.coun))
+colnames(tab) <- c("BF$_{0u}$", "BF$_{0cd}$", "BF$_{0main}$", "BF$_{0ci}$")
+rownames(tab) <- c("Assertiveness Values Lab Location","Assertiveness Values Country",
+                   "Assertiveness Practices Lab Location","Assertiveness Practices Country",
+                   "Disagreement Lab Location","Disagreement Country")
+
+apa_table(tab,
+          align = c("l","c","c","c","c"),
+          col_spanners = list(`Bayes Factors` = c(2,5)),
+          caption = "Evidence for the cultural differences perspective.", 
+          note = "The Bayes factors reflect evidence for the null-model versus the models that include effects of culture dimension, target emotion, and their interaction. BF$_{0u}$ gives the evidence for null model (indicated by the subscript $0$) versus the unconstrained model (indicated by the subscript $u$). Subscript $cd$ refers to the cultural differences only model, subscript $main$ refers to the main effects model (cultural differences and target emotion), and subscript $ci$ refers to the culture interaction model (cultural differences-by-target emotion interaction). See text for details about the different models. The null-model outperforms all more complex models for each of the different operationalisations of the culture dimension.",
+          escape=F)
+```
+
+
+```{r main-gender}
+bf.targ.gender <- as.vector(ttestBF(formula = status ~ gender, data = dat.dvs))[1]
+bf.targ.gender.comp <- as.vector(ttestBF(formula = competence ~ gender, data = dat.dvs))[1]
+bf.targ.gender.warm <- as.vector(ttestBF(formula = warmth ~ gender, data = dat.dvs))[1]
+bf.targ.gender.cont <- as.vector(ttestBF(formula = control ~ gender, data = dat.dvs))[1]
+```
+
+__*Main effect of target.*__ Are male or female targets generally accorded more status? 
+We ran a simple independent-samples t-test to answer this question. In contrast to Study 1, female targets are accorded slightly *less* status than male targets ($M_{female}=$ `r round(mean(dat$status[dat$gender=="female"]),2)`; $M_{male}=$ `r round(mean(dat$status[dat$gender=="male"]),2)`), yet the Bayes factor analysis provides moderate evidence against the gender effect: BF$_{10}=$ `r myformat(bf.targ.gender)`; BF$_{01}=$ `r myformat(1/bf.targ.gender)` (Frequentist statistics: `r apa_print(t.test(status~gender, data=dat))$statistic`). For the other dependent variables, we also found evidence in favor of the null-hypotheses; for competence BF$_{10}=$ `r myformat(bf.targ.gender.comp)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.comp)`, for warmth BF$_{10}=$ `r myformat(bf.targ.gender.warm)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.warm)`, and for out-of-control BF$_{10}=$ `r myformat(bf.targ.gender.cont)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.cont)`. 
+
+```{r main-emotion}
+bf.targ.emo <- as.vector(ttestBF(formula = status ~ emotion, data = dat.dvs))[1]
+bf.targ.emo.comp <- as.vector(ttestBF(formula = competence ~ emotion, data = dat.dvs))[1]
+bf.targ.emo.warm <- as.vector(ttestBF(formula = warmth ~ emotion, data = dat.dvs))[1]
+bf.targ.emo.cont <- as.vector(ttestBF(formula = control ~ emotion, data = dat.dvs))[1]
+```
+
+__*Main effect of emotion.*__ Are angry or not-angry targets generally accorded more status? 
+A simple independent-samples t-test showed evidence against a main effect of emotion on status conferral: BF$_{10}=$ `r myformat(bf.targ.emo)`; BF$_{01}=$ `r myformat(1/bf.targ.emo)` (Frequentist statistics: `r apa_print(t.test(status~emotion, data=dat))$statistic`). For the other dependent variables, we did find evidence in favor of a main effect of emotion; for competence BF$_{10}=$ `r myformat(bf.targ.emo.comp)`, for warmth BF$_{10}=$ `r myformat(bf.targ.emo.warm)`, and for out-of-control BF$_{10}=$ `r myformat(bf.targ.emo.cont)`. As becomes evident from Figure \@ref(fig:fig-main), for competence and warmth, angry targets are considered less competent and less warm than non-angry targets, respectively, and for out of control, angry targets are considered more out of control than non-angry targets.  
+
+
+```{r dat-rater, eval = T}
+# select relevant variables for main analyses
+rater.gender <- ifelse(data$Gender == "Female", "female",NA)
+rater.gender <- ifelse(data$Gender == "Male", "male", rater.gender)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  perc.sadness = data$Q372_1,
+                  rater.gender = rater.gender)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$rater.gender <- as.factor(dat$rater.gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+plotdat2 <- dat
+plotdat2$Rater <- plotdat2$rater.gender
+```
+
+```{r rater-analysis, cache=TRUE}
+bayes.rater <- doBayesModerators(dat, dat$status, rscale, dat$rater.gender, pos = F)
+```
+
+```{r rater-analysis-split}
+bf.targ.gender.women <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="female",]))[1]
+bf.targ.gender.men   <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="male",]))[1]
+bf.interaction.gender <- as.vector(generalTestBF(status ~ gender:rater.gender, data=dat))
+```
+
+__*Gender of the rater.*__ Do male and female raters differentially display the main effects or interactions derived from the theoretical perspectives (e.g., do male or female raters particularly show gender stereotyping effects or reversed gender biases?). The Bayes factor analysis indicates that the data is slightly more likely under the null-model than under the moderator interaction model (which assumes a three-way interaction between target gender, target emotion, and rater gender): BF$_{0m}=$ `r myformat(bayes.rater$bfs0[4])`. In contrast to Study 1, there was no evidence that female participants accorded more status to female targets ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="female"])`) than to male targets ($M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="female"])`): BF$_{10}=$ `r bf.targ.gender.women`; BF$_{01}=$ `r 1/bf.targ.gender.women`. For male participants, the analysis indicated no evidence either way ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="male"])`; $M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="male"])`): BF$_{10}=$ `r bf.targ.gender.men`, BF$_{01}=$ `r 1/bf.targ.gender.men`. Again, there was no evidence for an interaction: BF$_{10}=$ `r bf.interaction.gender`, BF$_{01}=$ `r 1/bf.interaction.gender` (see also Figure  \@ref(fig:fig-rater)). 
+
+__*Individual differences.*__ Various individual difference moderators were included in the study in order to unpack any observed experimental effects. Specifically, scales related to beliefs about gender (in)equality as well as about self-presentation concerns were added to distinguish between perspective 3 and 4, which predict the same overall pattern of responses, yet driven by different factors. 
+
+```{r moderator-data}
+number_studies <- data$Number_studies
+ns <- number_studies
+#bin number of studies 
+breaks <- c(-1,0,2.1,5,10,20,max(ns, na.rm = T))
+tags <- c("0","1-2","3-5","6-10","11-20","20+")
+studies <- cut(ns, breaks, labels = tags)
+
+# for similar study question 1=yes, 2=no
+simstudy <- data$SimilarStudy
+similar <- case_when(simstudy == "No" ~ 2,
+                      simstudy == "Yes" ~ 1,
+                      TRUE ~ as.numeric(simstudy))
+psycourse <- data$Psy_Course
+psy <- case_when(psycourse == "No" ~ 2,
+                 psycourse == "Yes" ~ 1,
+                 TRUE ~ as.numeric(psycourse))
+aware.gender <- data$Gender_Awareness
+aware.emotion <- data$Emotion_Awareness
+
+#study about
+targetwords <- c("gender","sex","female","male"," women "," woman "," men "," man ")
+contains <- sapply(targetwords,function(x) grepl(x,data$StudyAbout))
+total <- apply(contains, 1, any)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  nes = rowMeans(NES),
+                  im = rowMeans(IM), 
+                  em = rowMeans(EM), 
+                  bgw = rowMeans(BGW), 
+                  sb = rowMeans(SB),
+                  studies = studies,
+                  similar = as.factor(similar), 
+                  psy = as.factor(psy),
+                  aware.gender = aware.gender,
+                  aware.emotion = aware.emotion)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$studies <- as.numeric(dat$studies)-3.5
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+plotdat3 <- dat
+```
+
+```{r moderator-analyses, cache=T}
+# News exposure increases status conferral to women relative to men
+bayes.nes <- doBayesModerators(dat, dat$status, rscale, dat$nes, pos=F)
+# Beliefs about gender inequality in the workplace increase status conferral to women relative to men
+bayes.bgw <- doBayesModerators(dat, dat$status, rscale, dat$bgw, pos=F)
+# Sexist beliefs decrease status conferral to women relative to men
+bayes.sb <- doBayesModerators(dat, dat$status, rscale, dat$sb, pos=T)
+# Internation motivation to respond without sexism increases status conferral to women relative to men
+bayes.im <- doBayesModerators(dat, dat$status, rscale, dat$im, pos=F)
+
+# Models for perspective 4: self-presentation goals and study savviness
+
+# External motivation to respond without sexism predicts more status conferral to women relative to men
+bayes.em <- doBayesModerators(dat, dat$status, rscale, dat$em, pos=F)
+# Number of research studies participated in predicts more status conferral to women relative to men
+bayes.ns <- doBayesModerators(dat, dat$status, rscale, dat$studies, pos=F)
+# Having participated in a similar study predicts more status conferral to women relative to men
+bayes.sim <- doBayesModerators(dat, dat$status, rscale, dat$similar, pos=F)
+# Having taken a psychology course predicts more status conferral to women relative to men
+bayes.psy <- doBayesModerators(dat, dat$status, rscale, dat$psy, pos=F)
+# Awareness of hypothesis being about gender predicts more status conferral to women relative to men
+bayes.awaregen <- doBayesModerators(dat, dat$status, rscale, dat$aware.gender, pos=F)
+# Awareness of hypothesis being about emotion predicts more status conferral to women relative to men
+bayes.awareemo <- doBayesModerators(dat, dat$status, rscale, dat$aware.emotion, pos=F)
+```
+
+```{r moderator-table1}
+bfsI.bgw <- bayes.bgw$bfsID
+bfsI.sb  <- bayes.sb$bfsID
+bfsI.nes <- bayes.nes$bfsID
+bfsI.im  <- bayes.im$bfsID
+
+modnames <- c("Ind.Diff. vs. Null", "Ind.Diff. vs. Exp.Eff.", "Ind.Diff. vs. Mod.Int.", "Ind.Diff. vs. Full")
+tab <- rbind(myformat(bfsI.bgw), myformat(bfsI.sb), myformat(bfsI.nes), myformat(bfsI.im))
+colnames(tab) <- c("BF$_{i0}$", "BF$_{ie}$", "BF$_{im}$", "BF$_{iu}$")
+rownames(tab) <- c("Beliefs Gender Workplace","Sexist Beliefs","News Exposure","Internal Motivation")
+
+apa_table(tab,
+          align = c("l","c","c","c","c"),
+          col_spanners = list(`Bayes Factors` = c(2,5)),
+          caption = "Evidence for gender equality beliefs and experimental effects on status conferral (perspective 3).", 
+          note = "The Bayes factors reflect evidence for the individual differences only model vs the interaction effects models. BF$_{i0}$ gives the evidence for the individual differences only model (indicated by the subscript $i$) versus the null-model (intercept only; indicated by the subscript $0$). Subscript $e$ refers to the experimental effects model, subscript $m$ refers to the moderation model, and subscript $u$ refers to the unconstrained model. See text for details about the different models.",
+          escape=F)
+```
+
+```{r moderator-table2}
+bfsI.em  <- bayes.em$bfsID
+bfsI.ns  <- bayes.ns$bfsID
+bfsI.sim <- bayes.sim$bfsID
+bfsI.psy <- bayes.psy$bfsID
+bfsI.agen <- bayes.awaregen$bfsID
+bfsI.aemo <- bayes.awareemo$bfsID
+
+tab <- rbind(bfsI.em, bfsI.ns, bfsI.sim, bfsI.psy, bfsI.agen, bfsI.aemo)
+tab <- apply(tab, 2, myformat)
+colnames(tab) <- c("BF$_{i0}$", "BF$_{ie}$", "BF$_{im}$", "BF$_{iu}$")
+rownames(tab) <- c("External Motivation No Sexism","Research Study Experience","Participated in Similar Study","Taken Psychology Course","Awareness of Target Gender", "Awareness of Target Emotion")
+
+apa_table(tab,
+          #col_spanners = list(`Bayes Factors` = c(2,7)), 
+          align = c("l","c","c","c","c"),
+          caption = "Evidence for self-presentation concerns and experimental effects on status conferral (perspective 4).", 
+          note = "The Bayes factors reflect evidence for the individual differences only model vs the interaction effects models. BF$_{i0}$ gives the evidence for the individual differences only model (indicated by the subscript $i$) versus the null-model (intercept only; indicated by the subscript $0$). Subscript $e$ refers to the experimental effects model, subscript $m$ refers to the moderation model, and subscript $u$ refers to the unconstrained model. See text for details about the different models. ",
+          escape=F)
+```
+
+For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site and design. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the interaction term between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender, and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
+
+The results of the individual differences moderation analyses are given in Table \@ref(tab:moderator-table1) (for moderation effects related to beliefs about gender (in)equality; perspective 3) and Table \@ref(tab:moderator-table2) (for moderation effects related to self-presentation concerns and study savviness; perspective 4). As the Bayes factors show, there is evidence that some of the individual difference measures (i.e., beliefs about gender in the workplace, internal motivation not to appear sexist, external motivation not to appear sexist, and awareness of the target gender) are related to status conferral in general (main effects of individual differences), but strong evidence *against* moderation effects of the individual differences on the experimental target gender, target emotion, or target gender-by-emotion effects (BF$_{im}$). 
+<!-- Note that only for sexist beliefs the evidence against moderation vs. individual differences is not overwhelming, yet here the null-model outperforms both the individual differences only model (BF$_{0i}=$ `r myformat(1/bfsI.sb[1])`) and the moderation model (BF$_{0m}=$ `r myformat(bayes.sb$bfsID[3]/bayes.sb$bfsID[1])`). -->
+
+
+```{r dat-students, eval = T}
+# select relevant variables for main analyses
+student <- ifelse(data$University == "Yes", "student", NA)
+student <- ifelse(data$University == "No", "adult", student)
+
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  student = student)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+dat$student <- as.factor(dat$student)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+dat.student <- dat
+```
+
+```{r student-analysis, cache=TRUE}
+bayes.student <- doBayesModerators(dat, dat$status, rscale, dat$student, pos = T)
+```
+
+__*General public vs. students.*__ Finally, we assessed whether students and adults from the general public differed in the extent to which they applied (reversed) gender stereotyping. The student vs. general public status was determined at the individual level (rather than the sample level) based on responses to the item 'Are you currently a university student?'. However, again the individual differences-only model (main effect of student status) outperformed all other models including those with a moderating effect of student status (BF$_{im}=$ `r myformat(bayes.student$bfsID[3])`; see also Figure \@ref(fig:fig-student)). 
+
+
+## Secondary Methodological Tests 
+
+As preregistered, we also investigated continuous participant ratings of anger extremity, appropriateness, dominance and warmth as moderators. 
+
+```{r dat-extreme-b, eval = T}
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  approp = data$Q376,
+                  dominant = data$Q377,
+                  warm = data$Q379)                     
+
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+extremity.per.design <- sapply(designs, function(x) mean(dat$perc.anger[dat$design==x&dat$emotion=="angry"]))
+```
+
+```{r secondary-analyses, cache=TRUE}
+dat.anger <- dat[dat$emotion=="angry",]
+#anger extremity b
+bayes.extremeb <- as.vector(correlationBF(dat.anger$perc.anger, dat.anger$status, nullInterval = c(-1,0)))[1]
+rho.extremeb <- correlationBF(dat.anger$perc.anger, dat.anger$status, posterior = TRUE, iterations = 10000)
+#appropriateness
+bayes.approp <- as.vector(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)))[1]
+rho.approp <- correlationBF(dat.anger$approp, dat.anger$status, posterior = TRUE, iterations = 10000)
+#dominance 
+bayes.dominance <- doBayesModerators(dat, dat$status, rscale, dat$dominant, pos = T)
+#warmth 
+bayes.warmth.mod <- doBayesModerators(dat, dat$status, rscale, dat$warm, pos = F)
+
+```
+
+__*Anger extremity hypothesis B.*__ We expected that more extreme anger, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. In order to test this hypothesis, we ran a Bayesian correlation analysis with perceived anger and status conferral as variables on the subset of the data including only the anger condition. As we expected a negative relation, the interval was restricted to cover [-1,0]. The data, however, strongly favored the null-hypothesis: BF$_{10}=$ `r bayes.extremeb`; BF$_{01}=$ `r 1/bayes.extremeb` and the correlation coefficient was in fact slightly positive ($\rho=$ `r median(rho.extremeb)`).  
+
+__*Appropriateness hypothesis.*__ Here we expected that less appropriate anger expressions, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. That is, we expected a positive correlation between appropriateness and status conferral in the anger-condition subset of the data. The data suggested that such a correlation was indeed present: BF$_{10}=$ `r myformat(bayes.approp)`, $\rho=$ `r median(rho.approp)`. 
+
+__*Target dominance hypothesis.*__ We expected more backlash against angry women in status conferral (i.e., a stronger interaction between target gender and emotion expression) to the extent the anger expression projects dominance. This means a moderating effect of dominance on the interaction between target gender and emotion. (Note that this hypothesis is unlikely given that we did not find evidence for a backlash effect against women in the first place.) Although the moderation-interaction model outperforms the individual-differences-only model (BF$_{mi}=$ `r 1/bayes.dominance$bfsID[3]`), the model performs worse than the experimental-effects-only model that excludes the crucial threeway interaction between gender, emotion, and perceived dominance: BF$_{me}=$ `r bayes.dominance$bfsID[2]/bayes.dominance$bfsID[3]`; BF$_{em}=$ `r bayes.dominance$bfsID[3]/bayes.dominance$bfsID[2]`. 
+
+__*Target warmth hypothesis.*__ Here we expected more backlash against angry women in terms of reduced status conferral (i.e., a stronger interaction between target gender and emotion expression) to the extent the anger expression projects a lack of warmth. This translates into a moderating effect of warmth on the interaction between target gender and emotion. The data, however, provide more evidence for the individual-differences-only model than for the moderator-interaction model BF$_{im}=$ `r bayes.warmth.mod$bfsID[3]`. 
+
+```{r multiverse}
+## Language experience 
+lang.exp <- data$EnglishExperience
+# include when 5 or more years of experience in target language
+pass.1 <- ifelse(lang.exp>=5, 1, 0)
+
+## Target gender check 
+# for gender check question 1=female, 2=male 
+gen.check <- data$Target_Gender
+gen.check <- case_when(gen.check == "Female" ~ "female",
+                       gen.check == "Male" ~ "male",
+                       TRUE ~ gen.check)
+# include when identified gender is the same as gender condition
+pass.2 <- ifelse(gen.check==target_gender, 1, 0)
+
+## Straightlining
+sl.nes <- apply(data[,paste0("NES",1:6)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.im  <- apply(data[,paste0("IM_Non_Sex",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.em  <- apply(data[,paste0("EM_Non_Sex",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.bgw <- apply(data[,paste0("BGenWorkplace",1:5)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl.sb  <- apply(data[,paste0("Sexist_Beliefs",1:3)], 1, function(x) ifelse(sd(x)==0,1,0))
+sl <- cbind(sl.nes, sl.im, sl.em, sl.bgw, sl.sb)
+# include when not straightlined on all 5 scales
+pass.3 <- ifelse(rowSums(sl)<5, 1, 0)
+
+## Material quality
+# here we need to keep the NAs because some pp did not answer this question 
+pass.4 <- ifelse(data$StimuliQuality > 3 | is.na(data$StimuliQuality), 1, 0)
+pass.4a <- ifelse(data$VideoQuality >3, 1, 0)
+pass.4[!pass.4a&!is.na(pass.4a)] <- 0
+
+## Mode of administration 
+pass.5 <- ifelse(data$Device %in% c("Desktop computer", "Laptop computer"), 1, 0)
+
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  man.gender = gen.check)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+## Manipulation failure design
+BF_gen <- 1:27
+BF_emo <- 1:27
+pass.6a <- 1:27
+pass.6b <- 1:27
+for(i in 1:27){
+  d <- subset(dat, design==i)
+  dd <- table(d$gender,d$man.gender)
+  BF_gen[i] <- as.vector(contingencyTableBF(dd, sampleType = "indepMulti", fixedMargin = "rows"))
+  BF_emo[i] <- as.vector(ttestBF(formula = perc.anger ~ emotion, data = d, nullInterval = c(0,Inf)))[1]
+  pass.6a[i] <- ifelse(BF_gen[i]<10&BF_emo[i]<10,0,1)
+  pass.6b[i] <- ifelse(BF_gen[i]<10|BF_emo[i]<10,0,1)
+}
+# for design 7, there is no compelling evidence that the angry condition is perceived as angrier than the neutral condition... 
+pass.6a <- ifelse(condition == which(!pass.6a), 0, 1)
+pass.6b <- ifelse(condition == which(!pass.6b), 0, 1)
+
+if(is.logical(pass.6a)) pass.6a <- rep(1, nrow(data))
+
+```
+
+```{r function-multiverse}
+do.multiverse = function(dat, rscale, bayes.main){
+  # remove observations with NA in any of the relevant variables 
+  badMat <- is.na(dat) | dat[,] == ""
+  good=apply(badMat,1,mean)==0
+  dat=dat[good,]
+
+  # remove labs with fewer than 3 observations 
+  dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+  dat$emotion <- as.factor(dat$emotion)
+  dat$gender <- as.factor(dat$gender)
+  # renumber site indicators (for multilevel models) 
+  dat$site <- as.numeric(as.factor(dat$site))
+  dat <- arrange(dat, site) 
+  
+  # so look at pass1, pass2, pass4, pass5 so 2^4=16 combinations... 
+  bayes.multiverse <- vector("list", 16)
+  subs <- vector(length = 16)
+  
+  d <- dat[dat$pass.1==1,]
+  subs[1] <- nrow(d)
+  bayes.multiverse[[1]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.2==1,]
+  subs[2] <- nrow(d)
+  bayes.multiverse[[2]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.4==1,]
+  subs[3] <- nrow(d)
+  bayes.multiverse[[3]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.5==1,]
+  subs[4] <- nrow(d)
+  bayes.multiverse[[4]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.2==1,]
+  subs[5] <- nrow(d)
+  bayes.multiverse[[5]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.4==1,]
+  subs[6] <- nrow(d)
+  bayes.multiverse[[6]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.5==1,]
+  subs[7] <- nrow(d)
+  bayes.multiverse[[7]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.2==1&dat$pass.4==1,]
+  subs[8] <- nrow(d)
+  bayes.multiverse[[8]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.2==1&dat$pass.5==1,]
+  subs[9] <- nrow(d)
+  bayes.multiverse[[9]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.4==1&dat$pass.5==1,]
+  subs[10] <- nrow(d)
+  bayes.multiverse[[10]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.4==1,]
+  subs[11] <- nrow(d)
+  bayes.multiverse[[11]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.5==1,]
+  subs[12] <- nrow(d)
+  bayes.multiverse[[12]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.4==1&dat$pass.5==1,]
+  subs[13] <- nrow(d)
+  bayes.multiverse[[13]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.2==1&dat$pass.4==1&dat$pass.5==1,]
+  subs[14] <- nrow(d)
+  bayes.multiverse[[14]] <- doBayes(d, d$status, rscale)
+  d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.4==1&dat$pass.5==1,]
+  subs[15] <- nrow(d)
+  bayes.multiverse[[15]] <- doBayes(d, d$status, rscale)
+  
+  subs[16] <- nrow(dat)
+  bayes.multiverse[[16]] <- bayes.main
+
+  return(list(bayes.multiverse = bayes.multiverse, 
+         subs = subs))
+}
+```
+
+```{r multiverse-status, cache=TRUE}
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  pass.1, 
+                  pass.2,
+                  pass.3,
+                  pass.4,
+                  pass.5,
+                  pass.6a,
+                  pass.6b)                   
+multiverse.status = do.multiverse(dat, rscale, bayes.status)
+```
+
+## Multiverse Analysis
+
+As in Study 1, for the main analyses we used the intent-to-treat approach, in which few to no observations or participants are excluded [@gupta2011intentiontotreat; @mccoy2017understanding]. As preregistered we included the following paths in the multiverse: 
+
+- Language fluency. 
+
+1. Include everyone regardless of years of English experience (or other language in which the survey is administered) 
+2. Exclude participants with less than 5 years of English experience (or other language in which the survey is administered) 
+
+- Manipulation check.
+
+1. Exclude no one based on the manipulation check for target gender
+2. Exclude participants who did not correctly indicate the target's gender 
+
+- Straightlining.
+
+1. Exclude no one based on pattern of responding
+2. Exclude participants who always selected the same option on all items within each of the 5 scales
+
+- Material quality.
+
+1. Exclude no one based on reported quality of video/audio materials
+2. Exclude participants from designs with video/audio stimuli who indicated poor video/audio quality (<3 on the 7-point scale)
+
+- Mode of administration.
+
+1. Exclude no one based on method of taking the survey
+2. Exclude participants who did not complete the study on a laptop or desktop
+
+- Manipulation failure designs.
+
+1. Include all designs 
+2. Exclude designs for which there is no compelling evidence (i.e., BF$<10$) for both of the manipulation checks (target gender and target emotion)
+3. Exclude designs for which there is no compelling evidence (i.e., BF$<10$) for either of the manipulation checks (target gender or target emotion). 
+
+In the preregistration we specified that we would only analyze a specific exclusion-based multiverse path when the exclusion affect at least 5% of the sample. However, the straightlining criterion did not reach this threshold; only `r sum(dat$pass.3==0, na.rm=T)/nrow(dat)*100`% of the sample was excluded because of straightlining across all 5 scales. The language fluency (`r sum(dat$pass.1==0, na.rm=T)/nrow(dat)*100`%), target gender manipulation check item (`r sum(dat$pass.2==0, na.rm=T)/nrow(dat)*100`%), the material quality (`r sum(dat$pass.4==0, na.rm=T)/nrow(dat)*100`%), and the mode of administration (`r sum(dat$pass.5==0, na.rm=T)/nrow(dat)*100`%) did result in a meaningful proportion of exclusion. There was only 1 design (i.e., design 7) for which there was no compelling evidence that targets in the anger condition were perceived as angrier than in the not-angry condition (BF$_{10}=$ `r BF_emo[BF_emo<10]`). This, however, meant (`r sum(dat$pass.6b==0)/nrow(dat)*100`%) of the sample, which does not pass the threshold of 5%. 
+
+```{r multiverse-competence, cache=TRUE}
+# make sure the dv is still called 'status' 
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = competence,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  pass.1, 
+                  pass.2,
+                  pass.3,
+                  pass.4,
+                  pass.5,
+                  pass.6a,
+                  pass.6b)                   
+multiverse.competence = do.multiverse(dat, rscale, bayes.competence)
+```
+
+```{r multiverse-warmth, cache=TRUE}
+# make sure the dv is still called 'status' 
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = warmth,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  pass.1, 
+                  pass.2,
+                  pass.3,
+                  pass.4,
+                  pass.5,
+                  pass.6a,
+                  pass.6b)                   
+multiverse.warmth = do.multiverse(dat, rscale, bayes.warmth)
+```
+
+```{r multiverse-control, cache=TRUE}
+# make sure the dv is still called 'status' 
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = data$InControl,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  pass.1, 
+                  pass.2,
+                  pass.3,
+                  pass.4,
+                  pass.5,
+                  pass.6a,
+                  pass.6b)                   
+multiverse.control = do.multiverse(dat, rscale, bayes.control)
+```
+
+```{r multiverse-tab,eval=T}
+modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+
+bfs.multi.status <- sapply(multiverse.status$bayes.multiverse, function(x) x$bfsb[1:5])
+
+tab.status <- data.frame(Comparison = modnames, BFs = bfs.multi.status)
+row.names(tab.status) <- NULL
+```
+
+```{r multiverse-fig, eval=FALSE, fig.width=6, fig.asp=.8, fig.cap="Results from the multiverse analysis: Bayes factors in favor of a theoretical perspective are above the horizontal line, Bayes factors against the theoretical perspectives (in favor of the intercepts-only baseline model) are below the horizontal line. The color of the points reflects different theoretical perspectives and the x-axis reflects the number of participants the analysis is based on. The majority of analyses provide evidence against the theoretical perspectives."}
+# figure of multiverse with n on x-axis and BF for the 3 different theories vs the baseline model on the y-axis
+dd <- tab.status[1:3,]
+dd <- reshape(dd, varying = list(2:17), direction = "long")
+dd$n <- rep(multiverse.status$subs, each=3)
+cols <- RColorBrewer::brewer.pal(5,"Dark2")
+yrange <- c(pretty(range(dd$BFs.1))[1], length(pretty(range(dd$BFs.1)))+1)
+par(las=1, font.main= 1
+    , cex.axis = 1
+    , cex.main = 1.2
+    , mar=c(4, 4, 2, 2) + 0.2)
+plot(dd$n, dd$BFs.1, 
+     ylim = yrange,
+     xlim = pretty(range(subs))[c(1,length(pretty(range(subs))))], 
+     axes=F, xlab="Sample Size", ylab="", type = "n")
+abline(h=1, lty=1)
+points(dd$n,dd$BFs.1
+       , pch=19
+       , col=alpha(cols[dd$id],0.6)
+       ,cex=1.2)
+axis(1,at=pretty(range(subs)))
+axis(2)
+title(ylab = expression(BF["theory vs. baseline"]))    
+legend("topright", legend = c("Gender Stereotyping", "Status Signalling", "Culture Change/Study Savviness"), 
+         col = alpha(cols[dd$id],0.6), pch = 19, bty = "n")
+
+
+
+```
+
+```{r multiverse-tab-competence,eval=T}
+modnames.competence <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+
+bfs.multi.competence <- sapply(multiverse.competence$bayes.multiverse, function(x) x$bfsb[1:5])
+
+tab.competence <- data.frame(Comparison = modnames.competence, BFs = bfs.multi.competence)
+row.names(tab.competence) <- NULL
+#4, 7, 9, 10, 12, 13, 14 
+```
+
+```{r multiverse-tab-warmth,eval=T}
+modnames.warmth <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs","Warmth vs. Designs")
+
+bfs.multi.warmth <- sapply(multiverse.warmth$bayes.multiverse, function(x) x$bfsb[1:6])
+
+tab.warmth <- data.frame(Comparison = modnames.warmth, BFs = bfs.multi.warmth)
+row.names(tab.warmth) <- NULL
+```
+
+```{r multiverse-tab-control,eval=T}
+modnames.control <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+
+bfs.multi.control <- sapply(multiverse.control$bayes.multiverse, function(x) x$bfsb[1:5])
+
+tab.control <- data.frame(Comparison = modnames.control, BFs = bfs.multi.control)
+row.names(tab.control) <- NULL
+```
+
+```{r plot-multiverse-function}
+plot.multiverse = function(data, cols, title, ybreaks, legend=FALSE, jitter0=TRUE, logged=TRUE){
+  tf <- trans_format('log10', math_format(10^.x))
+  tf.labs <- sapply(ybreaks, tf)
+  labs <- ifelse(ybreaks>1000,tf.labs,ybreaks)
+  xrange <- c(pretty(range(data$n))[1],max(pretty(range(data$n))))
+  yrange <- range(ybreaks)
+  legend.pos <- "none"
+  if(legend) legend.pos <- c(.8,.8)
+  data$id <- as.factor(data$id)
+  
+  # Default scatter plot
+  sp <- ggplot(data = data, aes(x = jitter(n, factor = 10), y = BFs.1, color = id)) + 
+    geom_point(alpha = 0.6, size = 3.5) +
+    geom_hline(yintercept = 1) +
+    ylab(expression(BF["theory vs. baseline"])) +
+    xlab("Sample Size") +
+    guides(color = guide_legend(nrow = 1)) +
+    scale_color_manual(values = cols, 
+                       labels = c("Gender Stereotyping", "Status Signalling", 
+                                  "Culture Change/Study Savviness", "Anger Supresses Warmth"),
+                       guide = "legend",
+                       name = '') + 
+    theme_classic() + 
+    geom_segment(aes(x=xrange[1],xend=xrange[2],y=-Inf,yend=-Inf), color = "black")+
+    geom_segment(aes(y=yrange[1],yend=yrange[2],x=-Inf,xend=-Inf), color = "black")+
+    theme(axis.line=element_blank(), 
+          legend.title = element_blank(),
+          legend.spacing.y = unit(0, "mm"), 
+          aspect.ratio = 1, 
+          axis.text = element_text(colour = 1, size = 14),
+          axis.title = element_text(size = 14), 
+          legend.background = element_blank(),
+          legend.text = element_text(size = 12),
+          legend.box.background = element_rect(colour = "black"),
+          legend.position = legend.pos,
+          plot.title = element_text(size=16)) +
+    ggtitle(title) + 
+    {if(max(ybreaks>10))scale_y_continuous(trans=scales::pseudo_log_trans(base = 10), limits = yrange, breaks = ybreaks, labels = labs)} +
+    {if(max(ybreaks==10))scale_y_continuous(trans=scales::pseudo_log_trans(sigma=10^(-length(ybreaks)), base = 10), limits = yrange, breaks = ybreaks, labels = labs)}
+  return(sp)
+}
+```
+
+```{r multiverse-fig-competence, fig.width=10, fig.height=11, fig.cap="Results from the multiverse analysis: Bayes factors in favor of a theoretical perspective are above the horizontal line, Bayes factors against the theoretical perspectives (in favor of the intercepts-only baseline model) are below the horizontal line. The color of the points reflects different theoretical perspectives and the x-axis reflects the number of participants the analysis is based on. Note that the y-axis is on a log-scale that differs between panels. For status conferral and competence, all analyses provide evidence against the theoretical perspectives. For out-of-control ratings, the status signalling perspective is the clear winner and for warmth, the anger-suppresses-warmth perspective is the clear winner."}
+# figure of multiverse with n on x-axis and BF for the 3 different theories vs the baseline model on the y-axis
+# Status 
+options(scipen = 10)
+dd <- tab.status[1:3,]
+dd
+dd <- reshape(dd, varying = list(2:17), direction = "long")
+dd$n <- rep(multiverse.status$subs, each=3)
+cols <- RColorBrewer::brewer.pal(5,"Dark2")
+p.stat <- plot.multiverse(data = dd, cols = cols,
+                title = "A. Status",
+                ybreaks = c(.0001,.001,.01,.1,1,10), 
+                legend = FALSE)
+# Competence 
+dd <- tab.competence[1:3,]
+dd
+dd <- reshape(dd, varying = list(2:17), direction = "long")
+dd$n <- rep(multiverse.competence$subs, each=3)
+cols <- RColorBrewer::brewer.pal(5,"Dark2")
+p.comp <- plot.multiverse(data = dd, cols = cols,
+                title = "B. Competence",
+                ybreaks = c(0,.0001,.01,.1,1,10), 
+                legend = FALSE)
+# Warmth
+dd <- tab.warmth[c(1:3,6),]
+dd
+dd <- reshape(dd, varying = list(2:17), direction = "long")
+dd$n <- rep(multiverse.warmth$subs, each=4)
+cols <- RColorBrewer::brewer.pal(5,"Dark2")
+p.warm <- plot.multiverse(data = dd, cols = cols,
+                title = "C. Warmth",
+                ybreaks = c(0, 1e10, 1e50, 1e80,1e120), 
+                legend = FALSE)
+
+# Control
+dd <- tab.control[c(1:3),]
+dd
+dd <- reshape(dd, varying = list(2:17), direction = "long")
+dd$n <- rep(multiverse.control$subs, each=3)
+cols <- RColorBrewer::brewer.pal(5,"Dark2")
+p.cont <- plot.multiverse(data = dd, cols = cols,
+                title = "D. Out of Control",
+                ybreaks = c(0, 1000, 1e10, 1e30), 
+                legend = FALSE)
+legend <- cowplot::get_legend(p.warm + theme(legend.position = c(0.5,0.5)))
+
+plotrow <- cowplot::plot_grid(p.stat,p.comp,p.warm,p.cont, ncol=2, nrow=2)
+cowplot::plot_grid(plotrow, legend,
+                   ncol=1,nrow=2, rel_heights = c(1,.1))
+
+```
+
+Figure \@ref(fig:multiverse-fig-competence)A displays the results of the 16 viable multiverse path for the main analysis of status conferral in which the models corresponding to the different theoretical perspectives are compared to the baseline model (random intercepts for sites and designs). For status conferral, given the most favorable set of exclusions, the data are still `r 1/max(as.numeric(bfs.multi.status[2,]))` times more likely under the baseline model than under the status signaling model. 
+
+# Exploratory Analyses
+
+```{r original_design}
+# select relevant variables for main analyses
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = status,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  perc.anger = data$Q370_1,
+                  perc.sadness = data$Q372_1)                     
+
+# remove observations with NA in any of the relevant variables 
+badMat <- is.na(dat) | dat[,] == ""
+good=apply(badMat,1,mean)==0
+dat=dat[good,]
+
+# remove labs with fewer than 3 observations 
+dat <- dat[dat$site %in% names(which(table(dat$site) > 2)),]
+
+dat$emotion <- as.factor(dat$emotion)
+dat$gender <- as.factor(dat$gender)
+# renumber site indicators (for multilevel models) 
+dat$site <- as.numeric(as.factor(dat$site))
+dat <- arrange(dat, site) 
+
+# t-test for original design only 
+original <- subset(dat, design==27)
+bayes.original.gender <- as.vector(ttestBF(formula = status ~ gender, data = original))
+```
+
+__*Target Gender Effect for the Brescoll and Uhlmann (2008) design across Studies 1 and 2.*__
+Our present Study 1 finds a tendency for greater to status attribution to women, whereas Study 2 finds greater status attribution to men. If we only consider the original design (i.e., design 27) in Study 2, we find no evidence for a target gender effect: BF$_{10}=$ `r bayes.original.gender`; BF$_{01}=$ `r 1/bayes.original.gender`, $M_{male}=$ `r mean(original$status[original$gender=="male"])`, $M_{female}=$ `r mean(original$status[original$gender=="female"])`. The absence of a gender difference in the original design can also be observed from Figure \@ref(fig:plot-design-moderators)E, where the target gender coefficient is almost exactly 0. 
+
+```{r gaertig_replication}
+gaertig <- subset(dat, design==7|design==8)
+bayes.gaertig <- as.vector(ttestBF(formula = status ~ design, data = gaertig))
+bayes.gaertig.dir <- as.vector(ttestBF(formula = status ~ design, data = gaertig, nullInterval = c(0,Inf)))[1]
+```
+
+```{r plot_gaertig}
+library(cowplot)
+gaertig <- subset(man_dat, design==7|design==8)
+gaertig$design <- as.factor(gaertig$design)
+gaertig$condition <- paste(gaertig$emotion, gaertig$design)
+pmain <- ggplot(gaertig, aes(x = perc.anger, y = jitter(status), color = condition), size = 2.2)+
+  geom_point(alpha = 0.5)+
+  ggpubr::color_palette("jco") +
+  theme_cowplot() +
+  scale_x_continuous(limits=c(0,100)) + 
+  scale_y_continuous(limits=c(1,11), breaks = seq(1,11,1)) + 
+  xlab("Perceived anger") +
+  ylab("Status") +
+  guides(color=guide_legend(title="Emotion | Design"))
+# Marginal densities along x axis
+xdens <- axis_canvas(pmain, axis = "x")+
+  geom_density(data = gaertig, aes(x = perc.anger, fill = condition),
+              alpha = 0.5, size = 0.2)+
+  ggpubr::fill_palette("jco")
+# Marginal densities along y axis
+# Need to set coord_flip = TRUE, if you plan to use coord_flip()
+ydens <- axis_canvas(pmain, axis = "y", coord_flip = TRUE)+
+  geom_density(data = gaertig, aes(x = status, fill = condition),
+                alpha = 0.5, size = 0.2)+
+  coord_flip()+
+  ggpubr::fill_palette("jco")
+p1 <- insert_xaxis_grob(pmain, xdens, grid::unit(.2, "null"), position = "top")
+p2<- insert_yaxis_grob(p1, ydens, grid::unit(.2, "null"), position = "right")
+ggdraw(p2)
+
+```
+
+__*Anger Extremity Effect for the Gaertig et al. (2019) design.*__
+We conducted a directed Bayesian t-test to see if we can replicate Gaertig et al.'s finding that moderate anger leads to more status conferral than extreme anger (regardless of target gender), by looking at their design (i.e., 7&8) in isolation. However, the data indicate *less* status conferral to moderate anger ($M_{moderate}=$ `r mean(gaertig$status[gaertig$design=="7"])`) than to extreme anger ($M_{extreme}=$ `r mean(gaertig$status[gaertig$design=="8"])`). The directed Bayesian t-test confirms strong evidence against the hypothesis: BF$_{+0}=$ `r bayes.gaertig.dir`; BF$_{0+}=$ `r 1/bayes.gaertig.dir`. In fact, when we remove the directionality constraint, we get some moderate evidence for a difference (in the opposite direction): BF$_{10}=$ `r bayes.gaertig`. 
+
+Relatedly, we explored how the Gaertig et al. (2019) design compared to the others that directly manipulated anger extremity. To unpack the anger extremity effect on status conferral, we estimated the overall status conferral per design, using varying intercepts per design and a fixed effect of the extremity manipulation. Figure \@ref(fig:plot-extremity) shows the estimated status conferral for the 18 designs in which extremity was manipulated directly, as well as the perceived anger extremity as rated by participants in the anger condition. Notably, the extremity effect (i.e., difference between the mild and extreme version) is the largest in the original Gaertig et al. (2019) design, yet in the opposite direction as found by Gaertig et al. (2019) Furthermore, while perceived anger extremity is consistently higher in the the extreme anger version of each design, the difference is clearly largest in the original Gaertig et al. design (7&8). 
+
+```{r plot-extremity, fig.cap="Estimated status conferral per design, colored based on anger extremity. Estimates are grouped per design and ordered based on the grouped average. The x's reflect the average perceived anger extremity in the anger condition per design, as rated by participants. The x-axis at the top gives the scale of the perceived anger extremity ratings (on a 0-100 scale) and the x-axis at the bottem gives scale of the estimated status conferral (on a 1-10 scale). "}
+cols <- ifelse(designs[designs%in%dat_sub$design_num] %in% mod.anger, colors_mod[1], colors_mod[2])
+#order based on mean status conferral per design, with first moderate and then extreme version of the design 
+m <- colMeans(bayes.extremity.rand$eff)
+seq <- seq(1, length(m), 2)
+m_mean <- rep(sapply(seq, function(i) {mean(m[i:(i+1)])}), each=2)
+o <- order(m_mean)
+
+designs.man.extremity <- designs[designs%in%dat_sub$design_num]
+
+#for manipulated designs, how extreme were they rated
+extr.designs <- extremity.per.design[designs.man.extremity]
+
+plotter(bayes.extremity.rand$eff, c(4,9), designs.man.extremity, cols, 
+        main = "", labs = c("Low","High"), leg = c("mildly angry","extremely angry"), 
+        leg.pos = c(4,18), order=o, ratings=extr.designs)
+
+```
+
+
+```{r mccormick}
+dat_mccormick <- subset(dat, design=="1"&emotion=="angry")
+bayes.mccormick <- as.vector(ttestBF(formula = status ~ gender, data = dat_mccormick, nullInterval = c(0,Inf)))[1]
+```
+
+__*Gender Effect for the McCormick-Huhn & Shields (2019) design.*__
+Here, we assessed whether the pattern in the original McCormick-Huhn & Shields (2019) storyboard design replicates, such that angry women are accorded *more* status than angry men. In the original McCormick-Huhn & Shields (2019) study, only anger conditions were included. To replicate their results, we ran a directed Bayesian t-test with target gender as independent variable on the subset of the data with design 1 and only the anger condition. The data indeed indicate slightly more status conferral to angry female ($M_{female}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="female"])`) than to angry male targets ($M_{male}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="male"])`). However, the directed Bayesian t-test suggests that these data are quite undiagnostic and provide only anecdotal the hypothesis: BF$_{+0}=$ `r bayes.mccormick`. Note that there are only `r sum(dat_mccormick$gender=="female")` participants in the angry female target condition and `r sum(dat_mccormick$gender=="male")` participants in the angry male target condition. 
+
+# An angry woman can get whatever she wants
+Here, we demonstrate how we can get the desired result of replicating the original Brescoll & Uhlmann (2008) result if we cherry-pick one of the many reasonable analysis paths. 
+In this case, we run the multiverse using the specified data exclusion settings again, this time using a single item 'status conferral' measure -- simply taking the item on status conferral rather than the composite of status, power, and independence. 
+
+```{r multiverse-status-single, cache=TRUE}
+dat <- data.frame(subj = 1:nrow(data), 
+                  site = data$UserID,
+                  design = condition,
+                  status = data$Status_DV,
+                  gender = target_gender,
+                  emotion = target_emotion,
+                  pass.1, 
+                  pass.2,
+                  pass.3,
+                  pass.4,
+                  pass.5,
+                  pass.6a,
+                  pass.6b)
+dat.single <- dat[!is.na(dat$status),]
+# remove labs with fewer than 3 observations 
+dat.single <- dat.single[dat.single$site %in% names(which(table(dat.single$site) > 2)),]
+dat.single$emotion <- as.factor(dat.single$emotion)
+dat.single$gender <- as.factor(dat.single$gender)
+# renumber site indicators (for multilevel models) 
+dat.single$site <- as.numeric(as.factor(dat.single$site))
+dat.single <- arrange(dat.single, site) 
+bayes.status.single <- doBayes(dat.single, dat.single$status, rscale)
+multiverse.status.single = do.multiverse(dat, rscale, bayes.status.single)
+```
+
+
+```{r multiverse-fig-single, eval=TRUE, fig.width=7, fig.asp=.8, fig.cap="Results from the multiverse analysis: Bayes factors in favor of a theoretical perspective are above the horizontal line, Bayes factors against the theoretical perspectives (in favor of the intercepts-only baseline model) are below the horizontal line. The color of the points reflects different theoretical perspectives, the shape of the points reflects the version of the dependent variable, and the x-axis reflects the number of participants the analysis is based on. The majority of analyses provide evidence against the theoretical perspectives."}
+library(gghighlight)
+plot.multiverse.dv = function(data, cols, title, ybreaks, legend=FALSE, jitter0=TRUE, logged=TRUE){
+  tf <- trans_format('log10', math_format(10^.x))
+  tf.labs <- sapply(ybreaks, tf)
+  labs <- ifelse(ybreaks>1000,tf.labs,ybreaks)
+  xrange <- c(pretty(range(data$n))[1],max(pretty(range(data$n))))
+  yrange <- range(ybreaks)
+  legend.pos <- "none"
+  if(legend) legend.pos <- c(.5,.2)
+  
+  data$n <- jitter(data$n, factor=10)
+  data$highlight <- ifelse(data$BFs.1 > 1,1,0)
+  data$bf.round <- paste0("BF = ",printnum(data$BFs.1,digits=2))
+  data$bf.round <- ifelse(data$highlight==1, data$bf.round, "")
+  
+  # Default scatter plot
+  sp <- ggplot(data) +
+    geom_point(alpha = 1, size = 3.5, aes(x = n, y = BFs.1, color=dv)) +
+    geom_hline(yintercept = 1) +
+    ylab(expression(BF["theory vs. baseline"])) +
+    xlab("Sample Size") +
+    guides(color = guide_legend(nrow = 1)) +
+    scale_color_manual(values = scales::alpha(cols, 0.4), 
+                       labels = c("multi-item status conferral", "single-item status conferral"),
+                       guide = "legend",
+                       name = '') + 
+    theme_classic() + 
+    geom_segment(aes(x=xrange[1],xend=xrange[2],y=-Inf,yend=-Inf), color = "black")+
+    geom_segment(aes(y=yrange[1],yend=yrange[2],x=-Inf,xend=-Inf), color = "black")+
+    theme(axis.line=element_blank(), 
+          legend.title = element_blank(),
+          legend.spacing.y = unit(0, "mm"), 
+          aspect.ratio = 1, 
+          axis.text = element_text(colour = 1, size = 14),
+          axis.title = element_text(size = 14), 
+          legend.background = element_blank(),
+          legend.text = element_text(size = 10),
+          legend.box.background = element_rect(colour = "black"),
+          legend.position = "bottom",
+          legend.box = "vertical",
+          plot.title = element_text(size=16)) +
+    ggtitle(title) + 
+    gghighlight(highlight==1, keep_scales = TRUE, use_direct_label = FALSE,
+                unhighlighted_params = list(colour = NULL, alpha = 0.3), label_key =  bf.round) + 
+    ggrepel::geom_label_repel(aes(x=n, y=BFs.1, label=bf.round), 
+                              min.segment.length = 0, box.padding = 1) + 
+    {if(max(ybreaks>10))scale_y_continuous(trans=scales::pseudo_log_trans(base = 10), limits = yrange, breaks = ybreaks, labels = labs)} +
+    {if(max(ybreaks==10))scale_y_continuous(trans=scales::pseudo_log_trans(sigma=10^(-length(ybreaks)), base = 10), limits = yrange, breaks = ybreaks, labels = labs)}
+  return(sp)
+}
+
+modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+
+bfs.multi.status.single <- sapply(multiverse.status.single$bayes.multiverse, function(x) x$bfsb[1:5])
+
+tab.status.single <- data.frame(Comparison = modnames, BFs = bfs.multi.status.single)
+row.names(tab.status.single) <- NULL
+
+dd <- data.frame(dv = factor(c(rep("multi",3),rep("single",3))),
+                 rbind(tab.status[1:3,],tab.status.single[1:3,]))
+dd <- reshape(dd, varying = list(3:18), direction = "long")
+dd$n <- c(rep(multiverse.status$subs, each=3), rep(multiverse.status.single$subs, each=3))
+dd$n <- as.numeric(dd$n)
+dd$Comparison <- factor(dd$Comparison, levels = c("Gender Stereotyping vs. Designs",
+                                                  "Status Signalling vs. Designs",
+                                                  "Culture Change/Study Savviness vs. Designs"))
+
+dd <- data.frame(dv = factor(c(rep("multi",16),rep("single",16))),
+                 BFs.1 = unlist(c(tab.status[1,2:17],tab.status.single[1,2:17])),
+                 n = c(multiverse.status$subs, multiverse.status.single$subs))
+
+cols <- c("slateblue","firebrick")
+p.stat <- plot.multiverse.dv(data = dd, cols = cols,
+                title = "Status Conferral (multi-item and single-item)",
+                ybreaks = c(.001,.01,.1,1,10), 
+                legend = TRUE)
+
+p.stat
+
+```
+
+So which are those highlighted paths? What are the corresponding specifications?
+
+```{r cherry-pick}
+cherries <- which(tab.status.single[1,2:17]>1)
+```
+
+Evidence in favor of the gender stereotyping perspective only occurs when we use (1) the single-item dependent variable, (2a) *only* exclude participants who did not complete the study on a computer OR (2b) exclude participants who did not complete the study on a computer AND did not correctly recall the target gender. However, if we use any other constellation of exclusion criteria we get evidence *against* the gender stereotyping perspective, such as (2c) exclude participants who did not complete the study on a computer and exclude participants who have less than 5 years of English experience, or (2d) exclude participants who did not complete the study on a computer and participants who did not correctly recall the target gender and participants from designs with video/audio stimuli who indicated poor video/audio quality. 
+
+For those two paths where we obtained evidence supporting the gender stereotyping perspective, we get a Bayes factor of `r tab.status.single[1,cherries[1]+1]` with `r dd$n[dd$BFs.1==tab.status.single[1,cherries[1]+1]]` participants and a Bayes factor of `r tab.status.single[1,cherries[2]+1]` with `r dd$n[dd$BFs.1==tab.status.single[1,cherries[2]+1]]` participants. 
+
+
+# Discussion
+
+
+# References
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id="refs" custom-style="Bibliography"></div>
+\endgroup
+
+\newpage
+
+# Appendix 
+
+## Model Specification 
+
+For the main analyses, we used Bayesian hierarchical modeling with participants nested in countries/labs and in designs. As the random-effects model in Study 1 indicated evidence against variability between countries/labs, and since we're interested in between-design variability in Study 2, we used varying intercepts across sites and varying intercepts + varying slopes across designs. We first constructed an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see below). Bayes factor model comparison is used to compare the models and determine what theory best predicts the empirical data. This method is based on the work by @haaf2018capturing. 
+
+Let $Y_{ijklm}$ be the status rating of the $i$th lab, the $j$th design, the $k$th participant in the $l$th target gender condition ($l=1,2$, for female and male targets, respectively) and the $m$th target emotion condition ($m=1,2$, for not-anger and anger expressions, respectively). Then 
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{3jlm} \theta_j, \sigma^2),\]
+
+where,
+
+- $\alpha_i$ is the baseline rating for the $i$th lab
+- $\eta_j$ is the baseline rating for the $j$th design
+- $\beta_j$ is the target gender effect for the $j$th design
+- $\gamma_j$ is the target emotion effect for the $j$th design
+- $\theta_j$ is the gender-by-emotion interaction effect for the $j$th design
+
+and
+
+- $x_{1jl}$ is the indicator for target gender ($l=1,2$, for female and male targets, respectively)
+- $x_{2jm}$ is the indicator for target emotion ($m=1,2$, for sadness/neutral and anger expressions, respectively)
+- $x_{3jlm}$ is the indicator for the gender-by-emotion interaction. 
+
+1. Null Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, and there are no differences in status conferral between designs. 
+
+From the general model, the null-model is adjusted as follows: 
+\[Y_{ijklm} \sim N(\alpha_i, \sigma^2).\]
+
+where $\alpha_i$ is the baseline status conferral rating for $i$th lab. 
+
+2. Designs Baseline Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, but status conferral differs between designs. 
+
+From the general model, the baseline-model is adjusted as follows: 
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j, \sigma^2).\]
+
+3. Gender Stereotyping: while angry men are accorded higher status than not-angry men, angry women are accorded lower status than not-angry women. 
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{3jlm} \theta_j, \sigma^2).\]
+
+Effect coding is used to quantify the different conditions. The ordinal constraints based on the theoretical perspective are put on the cell means, rather than on the parameters. Specifically, the cell mean of the angry men condition needs to be higher than the not-angry men condition and the cell mean of the not-angry women condition needs to be higher than the cell mean of the angry women condition. 
+Cell means are calculated based using the estimated parameters; for the not-angry women condition, for instance, this results in the following: $Y_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
+
+To satisfy the theoretical predictions, the following inequality constraints have to hold:
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 1} > Y_{\cdot \cdot 1 2} \\
+Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\end{aligned}
+\]
+
+4. Status Signaling: angry men are accorded higher status than not-angry men and angry women are accorded higher status than not-angry women. 
+
+The status signaling perspective applies the same model and parameters as the gender stereotyping model. 
+Here, the cell mean of the angry men condition needs to be higher than the not-angry men condition and the cell mean of the angry women condition needs to be higher than the cell mean of the not-angry women condition. To meet this condition, the following inequality constraints have to hold:
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 2} > Y_{\cdot \cdot 1 1} \\
+Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\end{aligned}
+\]
+
+5. Culture Change/ Study Savviness: angry women are accorded more status than not-angry women, angry men and not-angry men. There is no effect of emotion for men. 
+\[Y_{ijkl} \sim N(\alpha_i + \eta_j + x_{4kl} \delta + x_{5kl} \eta, \sigma^2),\]
+where parameter $\delta$ is the effect of emotion for female targets, parameter $\eta$ is the effect of angry women versus men (both not-angry and angry). The indicator variables are $x_{4lm}$ (-1/2 for not-angry female targets and 1/2 for angry female targets, and 0 for men) and $x_{5lm}$ (-1/3 for men, 2/3 for angry women and 0 for not-angry women). 
+
+The theoretical perspective entails that the cell mean of the angry women condition needs to be higher than the not-angry women condition and higher than the cell means of the angry men and the not-angry men conditions. To meet this condition, we put inequality constraints on the parameters:
+\[
+\begin{aligned}
+\delta > 0 \\
+\eta > 0
+\end{aligned}
+\]
+
+6. Anger suppresses warmth: not-angry men are considered warmer than angry men and not-angry women are considered warmer than angry women. 
+
+The anger suppresses warmth model applies the same model and parameters as the status signaling model, but constrains the emotion parameters in exactly the opposite direction:  
+\[
+\begin{aligned}
+Y_{\cdot \cdot 1 2} < Y_{\cdot \cdot 1 1} \\
+Y_{\cdot \cdot 2 2} < Y_{\cdot \cdot 2 1}
+\end{aligned}
+\]
+
+7. Cultural Differences: in high confrontation-oriented cultures, angry men and women are accorded more status than not-angry men and women, but this difference decreases or flips in harmony-oriented cultures. 
+This model builds on the model for perspectives 2 and 3 and is extended by parameters for the main effect and interactions of culture (as a standardized continuous score):  
+
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{4i} \zeta + x_{5im} \upsilon, \sigma^2,\]
+
+where we include two new parameters: 
+
+- $\zeta$ is the culture dimension main effect
+- $\upsilon$ is the culture-by-emotion interaction effect
+
+and 
+
+- $x_{4i}$ is the (standardized) culture dimension score of the $i$th lab
+- $x_{5im}$ is the (standardized) culture dimension score of the $i$th lab $\times$ the indicator for target emotion ($-0.5, 0.5$ for $m = 1,2$, for sadness/neutral and anger expressions, respectively). 
+
+The ordinal constraints are put on the culture-by-emotion parameter ($\upsilon$). Specifically, the positive effect of anger vs. sadness/neutral expressions should become smaller or negative with increased cultural harmony levels. To test this prediction, the interaction coefficient needs to be negative: 
+
+\[
+\begin{aligned}
+\upsilon < 0 
+\end{aligned}
+\]
+
+8. Unconstrained model: all effects are included, without any ordinal constraints (this is again the general model).
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{3jlm} \theta_j, \sigma^2),\]
+
+Note that in contrast to Study 1, we do not include the culture dimension in the unconstrained model, as culture is not relevant for the primary theoretical tests. 
+
+\newpage
+## Additional Figures 
+
+
+```{r, "fig-manipulation", fig.width=6, fig.asp=.6, fig.cap="Manipulation checks."}
+levels(man_dat$emotion) <- c("angry", "non-angry")
+par(mfrow=c(1,2))
+apa_lineplot(data = man_dat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("emotion")
+             , dv = "perc.anger"
+             , ylim = c(0,100)
+             , xlab = "Target Emotion"
+             , ylab = "Perceived Anger"
+             , jit = .1)
+apa_lineplot(data = man_dat
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("emotion")
+             , dv = "perc.sadness"
+             , ylim = c(0, 100)
+             , xlab = "Target Emotion"
+             , ylab = "Perceived Sadness "
+             , jit = .1)
+```
+
+```{r fig-rater, fig.cap="Status conferral per target gender, emotion, and rater gender.", fig.width=7.5, fig.asp=.4, fig.align="H"}
+par(mar = c(4,4,1,0))
+
+apa_lineplot(data = plotdat2
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion", "Rater")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , args_y_axis = list(at = c(1,6,11))
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+```
+
+```{r fig-student, fig.cap="Status conferral per target gender, emotion, and student status.", fig.width=7.5, fig.asp=.4, fig.align="H"}
+
+par(mar = c(4,4,1,0))
+
+dat.student$Student <- factor(dat.student$student, levels = c("adult","student"), labels = c("No", "Yes"))
+apa_lineplot(data = dat.student
+             , cex = 0.8
+             , id = "subj"
+             , factors = c("gender", "emotion", "Student")
+             , dv = "status"
+             , ylim = c(1, 11)
+             , xlab = "Gender Condition"
+             , ylab = "Status Conferral"
+             , jit = .1
+             , args_y_axis = list(at = c(1,6,11))
+             , args_legend = list(x = 1, y = 11
+                                  , title = "Emotion Condition"
+                                  , legend = c("angry", "non-angry")))
+
+```
+
+
+```{r moderator-plots1, fig.height=18, fig.asp=1, fig.cap="Moderation effects of beliefs about gender equality on status conferral.", fig.align="H"}
+# Models for perspective 3: beliefs about gender inequality
+plotdat3$Emotion <- plotdat3$emotion
+levels(plotdat3$Emotion) <- c("angry","non-angry")
+
+# gender workplace 
+fit <- lm(status ~ bgw * gender * Emotion, data = plotdat3)
+p1 <- interact_plot(fit, pred = bgw, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Beliefs about Gender in the Workplace", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# sexist beliefs 
+fit <- lm(status ~ sb * gender * Emotion, data = plotdat3)
+p2 <- interact_plot(fit, pred = sb, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Sexist Beliefs", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+p1/p2 
+```
+
+
+```{r moderator-plots2, fig.height=18, fig.asp=1, fig.cap="Moderation effects of beliefs about gender equality on status conferral.", fig.align="H"}
+# news exposure
+fit <- lm(status ~ nes * gender * Emotion, data = plotdat3)
+p3 <- interact_plot(fit, pred = nes, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "News Exposure Scale", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ im * gender *  Emotion, data = plotdat3)
+p4 <- interact_plot(fit, pred = im, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Internal Motivation Not to Be Sexist", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+p3/p4
+```
+
+```{r moderator-plots3, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# news exposure
+fit <- lm(status ~ em * gender * Emotion, data = plotdat3)
+p5 <- interact_plot(fit, pred = em, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "External Motivation Not to Appear Sexist", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,4,7), limits=c(1,7)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ studies * gender * Emotion, data = plotdat3)
+p6 <- interact_plot(fit, pred = studies, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Number of Research Studies Participated in", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(-2,0,2), limits=c(-2.5,2.5), labels = c("None","Some","Many")) + theme_apa()
+
+p5/p6
+```
+
+```{r moderator-plots4, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# similar study
+#plotdat3$Emotion <- plotdat3$emotion
+fit <- lm(status ~ similar * gender * Emotion, data = plotdat3)
+p7 <- cat_plot(fit, pred = similar, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Participated in Similar Study", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_discrete(breaks = c(1,2), limits=c(1,2), labels = c("Yes","No")) + theme_apa()
+
+# psychology course taken
+fit <- lm(status ~ psy * gender * Emotion, data = plotdat3)
+p8 <- cat_plot(fit, pred = psy, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Taken Psychology Course", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_discrete(breaks = c(1,2), limits=c(1,2), labels = c("Yes","No")) + theme_apa()
+
+p7/p8
+```
+```{r moderator-plots5, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
+# gender awareness
+fit <- lm(status ~ aware.gender * gender * Emotion, data = plotdat3)
+p9 <- interact_plot(fit, pred = aware.gender, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Awareness of Target Gender", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,5,9), limits=c(1,9)) + theme_apa()
+
+# internal motivation
+fit <- lm(status ~ aware.emotion * gender * Emotion, data = plotdat3)
+p10 <- interact_plot(fit, pred = aware.emotion, modx = gender, mod2 = Emotion, interval = T, int.width = .95
+              , x.label = "Awareness of Target Emotion", y.label = "Status Conferral"
+              , legend.main = "Target Gender") + scale_y_continuous(breaks = c(3,6,9), limits=c(3,9)) + 
+  scale_x_continuous(breaks = c(1,5,9), limits=c(1,9)) + theme_apa()
+
+p9/p10
+```
+

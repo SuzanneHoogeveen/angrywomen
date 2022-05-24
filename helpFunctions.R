@@ -348,22 +348,35 @@ doBayesModerators = function(dat, y, r, mod, pos=T){
               sampFull=sampFull, gamma=gamma))
 }
 
-plotter <- function(samp, range, countries, colors, main, labs){
+plotter <- function(samp, range, countries, colors, main, labs, 
+                    leg=NULL, cols=NULL, leg.pos=c(-1.5,27), 
+                    order=NULL, ratings=NULL, effectcolors=FALSE,noylab=FALSE){
   m <- apply(samp, 2, mean)
   q <- apply(samp, 2, quantile, c(.025,.975))
   #cols <- RColorBrewer::brewer.pal(9, "Set1")
+  ylabs="Design"
+  if(noylab){ylabs=""}
+  mar_1 <- ifelse(noylab, 6, 4)
   
   fullx <- pretty(range)
   atx <- c(labs[1], fullx[2:(length(fullx)-1)], labs[2])
-  J=length(m)
+  if(labs[2]=="Stereotype") atx <- c(labs[1], "", fullx[3:(length(fullx)-1)], labs[2])
+  J=length(m)  
   o=order(m)
+  if(!is.null(order)){o=order}
+
   sites <- as.numeric(as.factor(countries))
   
+  if(effectcolors){
+    exclude0 <- apply(q, 2, function(x) x[1]>0|x[2]<0)
+    colors <- ifelse(exclude0, "firebrick","grey36")
+  }
+
   par(las=1, font.main= 1
       , cex.axis = 0.8
       , cex.main = 1
-      , mar=c(2, 5.5, 2, 2) + 0.2)
-  plot(m[o], 1:J, xlim = range, ylim = c(0,J), axes=F, xlab="", ylab="", type = "n")
+      , mar=c(2, mar_1, 2, 1) + 0.2)
+  plot(m[o], 1:J, xlim = range, ylim = c(0,J), axes=F, xlab="", ylab=ylabs, type = "n")
   abline(v=0, lty=2)
   arrows(q[1,][o],1:J,q[2,][o],1:J
          ,code=3,angle=90,length=.05
@@ -372,15 +385,32 @@ plotter <- function(samp, range, countries, colors, main, labs){
          , pch=19
          , col=colors[sites[o]]
          ,cex=1.1)
-  axis(1,at=pretty(range), labels = atx
+  axis(1,at=pretty(range), labels = FALSE
        ,padj=-1)
   axis(2,at=c(1:J), labels = countries[o])
+  
+  text(x = pretty(range),
+       y = par("usr")[3] - 2,
+       labels = atx,
+       xpd = NA,
+       cex = 0.8)
+  
   title(main = main, font=1, line = 1)
+  if(!is.null(leg)){
+    legend(x=leg.pos[1],y=leg.pos[2], legend = leg, col = unique(colors), pch = 19,
+           bty = "n", cex=0.8)
+  }
+  if(!is.null(ratings)){
+    par(new = TRUE)
+    plot(ratings[o], 1:J, axes = FALSE, xlim = c(30,90), ylim = c(0,J), 
+         pch=4, ylab="")
+    axis(3, at = pretty(c(30,90)), padj = 1)
+  }
 }
 
 myformat = function(bfs){
   doformat = function(bf){
-    if(bf > 99999) {bf <- printnum(bf, format = "g", digits=2)}
+    if(bf > 99999) {bf <- sfsmisc::pretty10exp(bf, digits = 2, lab.type = "latex", lab.sep = "times")}
     else if (bf > 100) {bf <- printnum(bf, digits=0)} 
     else if (bf > 10) {bf <- printnum(bf, digits=1)}
     else {bf <- printnum(bf, digits=2)}
