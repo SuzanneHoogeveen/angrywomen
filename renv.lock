@@ -931,7 +931,7 @@
       "RemoteRef": "v0.1.0.9997",
       "RemoteSha": "1f124807b6acad09aaae156f0fb9d59590e6650c",
       "Remotes": "tidymodels/broom",
-      "Hash": "c0a656a84b96f21b12fdb0ef54d8bd06",
+      "Hash": "d16fbf55e3e0796ab28d1808ce113863",
       "Requirements": [
         "base64enc",
         "bookdown",
