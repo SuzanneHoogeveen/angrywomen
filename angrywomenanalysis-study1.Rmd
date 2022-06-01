@@ -738,13 +738,13 @@ where $\alpha_i$ is the baseline status conferral rating for $i$th lab.
 where parameter $\beta$ is the effect of the target gender, parameter $\gamma$ is the effect of the target emotion, and parameter $\theta$ is the gender-by-emotion interaction effect. Effect coding is used to quantify the different conditions. The indicator variables are $x_{1k}$ (-1/2 for female targets and 1/2 for male targets), $x_{2l}$ (-1/2 for sadness and 1/2 for anger), and $x_{3kl}$ (-1/2 for angry women and sad men, 1/2 for sad women and angry men). 
 
 The ordinal constraints based on the theoretical perspective are put on the cell means, rather than on the parameters. Specifically, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the sad women condition needs to be higher than the cell mean of the angry women condition. 
-Cell means are calculated based using the estimated parameters; for the sad women condition, for instance, this results in the following: $Y_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
+Cell means are calculated based using the estimated parameters; for the sad women condition, for instance, this results in the following: $\bar{Y}_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
 
 To satisfy the theoretical predictions, the following inequality constraints have to hold:
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 1} > Y_{\cdot \cdot 1 2} \\
-Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\bar{Y}_{\cdot \cdot 1 1} > \bar{Y}_{\cdot \cdot 1 2} \\
+\bar{Y}_{\cdot \cdot 2 2} > \bar{Y}_{\cdot \cdot 2 1}
 \end{aligned}
 \]
 
@@ -754,8 +754,8 @@ The status signaling perspective applies the same model and parameters as the ge
 Here, the cell mean of the angry men condition needs to be higher than the sad men condition and the cell mean of the angry women condition needs to be higher than the cell mean of the sad women condition. To meet this condition, the following inequality constraints have to hold:
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 2} > Y_{\cdot \cdot 1 1} \\
-Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\bar{Y}_{\cdot \cdot 1 2} > \bar{Y}_{\cdot \cdot 1 1} \\
+\bar{Y}_{\cdot \cdot 2 2} > \bar{Y}_{\cdot \cdot 2 1}
 \end{aligned}
 \]
 
@@ -783,10 +783,10 @@ Cell means are calculated using the estimated parameters; for the sad women in W
 To satisfy the theoretical ordinal constraints, the following has to hold: 
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 2 1} > Y_{\cdot \cdot 1 1 1} \\
-Y_{\cdot \cdot 2 2 1} > Y_{\cdot \cdot 2 1 1} \\
-Y_{\cdot \cdot 1 1 2} > Y_{\cdot \cdot 1 2 2} \\
-Y_{\cdot \cdot 2 1 2} > Y_{\cdot \cdot 2 2 2}
+\bar{Y}_{\cdot \cdot 1 2 1} > \bar{Y}_{\cdot \cdot 1 1 1} \\
+\bar{Y}_{\cdot \cdot 2 2 1} > \bar{Y}_{\cdot \cdot 2 1 1} \\
+\bar{Y}_{\cdot \cdot 1 1 2} > \bar{Y}_{\cdot \cdot 1 2 2} \\
+\bar{Y}_{\cdot \cdot 2 1 2} > \bar{Y}_{\cdot \cdot 2 2 2}
 \end{aligned}
 \]
 

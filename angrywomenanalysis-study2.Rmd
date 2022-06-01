@@ -1701,7 +1701,7 @@ From the general model, the baseline-model is adjusted as follows:
 \[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{3jlm} \theta_j, \sigma^2).\]
 
 Effect coding is used to quantify the different conditions. The ordinal constraints based on the theoretical perspective are put on the cell means, rather than on the parameters. Specifically, the cell mean of the angry men condition needs to be higher than the not-angry men condition and the cell mean of the not-angry women condition needs to be higher than the cell mean of the angry women condition. 
-Cell means are calculated based using the estimated parameters; for the not-angry women condition, for instance, this results in the following: $Y_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
+Cell means are calculated based using the estimated parameters; for the not-angry women condition, for instance, this results in the following: $\bar{Y}_{\cdot \cdot 1 1}  = -1/2 \beta  -1/2 \gamma + 1/2 \theta.$
 
 To satisfy the theoretical predictions, the following inequality constraints have to hold:
 \[
