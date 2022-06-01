@@ -67,7 +67,6 @@ library("ggplot2")
 library("patchwork")
 
 source("helpFunctions.R")
-source("helpFunctionsS2.R")
 ```
 
 ```{r refs, cache=F}
@@ -218,7 +217,7 @@ The independent samples Bayesian t-test gives infinite evidence in favor of the 
 
 ```{r status-analysis, cache=T}
 rscale <- c("main" = 1/4, "int" = 1/4, "rand" = 1, "var" = .15)
-bayes.status <- doBayes(dat, dat$status, rscale)
+bayes.status <- doBayes2(dat, dat$status, rscale)
 
 bfs.status <- bayes.status$bfsu
 bfs0.status <- bayes.status$bfs0
@@ -232,23 +231,6 @@ modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs"
 # get BFs for status signalling vs other models
 bfss.status <- bfs.status[4]/bfs.status
 bfss.status <- c(bfss.status[c(3,5)],bfs.status[4],bfss.status[c(2,1)])
-```
-
-```{r tab-status, eval=FALSE}
-modnames <- c("Status Signalling vs. Gender Stereotyping", "Status Signalling vs. Culture Change/Study Savviness",
-              "Status Signalling vs. Unconstrained", "Status Signalling vs. Designs", "Status Signalling vs. Null")
-
-
-tab <- data.frame(Comparison = modnames, BFs = myformat(bfss.status))
-row.names(tab) <- NULL
-
-apa_table(tab,
-          align = c("l","c"),
-          col.names = c("Comparison","Bayes factor"),
-          escape = F,
-          caption = "Evidence for the theoretical models vs. the Status Signalling model (i.e., the winning model).", 
-          note = "The Bayes factors reflect the evidence in favor of the Status Signallling perspectives versus the other models. Note that the Baseline model   includes random intercepts for labs and for designs, while the null model only includes random intercepts for labs.")
-
 ```
 
 __*Status Conferral.*__
@@ -284,43 +266,11 @@ dat$site <- as.numeric(as.factor(dat$site))
 dat <- arrange(dat, site) 
 
 
-bayes.competence <- doBayes(dat, dat$competence, rscale)
-bayes.warmth <- doBayes(dat, dat$warmth, rscale)
-bayes.control <- doBayes(dat, dat$control, rscale)
+bayes.competence <- doBayes2(dat, dat$competence, rscale)
+bayes.warmth <- doBayes2(dat, dat$warmth, rscale)
+bayes.control <- doBayes2(dat, dat$control, rscale)
 
 dat.dvs <- dat
-```
-
-```{r mediation, cache=TRUE, eval=FALSE}
-library(brms)
-f1 <- bf(warmth ~ 1 + emotion)
-f2 <- bf(competence ~ 1 + emotion)
-f3 <- bf(status ~ 1 + warmth + competence + emotion)
-m1 <- brm(f3 + f1 + f2 + set_rescor(FALSE), data = dat.dvs)
-
-post <- posterior_samples(m1)
-
-post <-
-  post %>% 
-  mutate(`a1 emotion-warmth` = b_warmth_emotionneutral,
-         `a2 emotion-competence` = b_competence_emotionneutral,
-         `b1 warmth-status` = b_status_warmth,
-         `b2 competence-status`= b_status_competence,
-         `c_prime emotion-status total direct effect`= b_status_emotionneutral) %>% 
-  mutate(`a1b1 emotion-warmth-status`= `a1 emotion-warmth` * `b1 warmth-status`,
-         `a2b2 emotion-competence-status`= `a2 emotion-competence` * `b2 competence-status`) %>% 
-  mutate(`c total effect`    = `c_prime emotion-status total direct effect` + `a1b1 emotion-warmth-status` + `a2b2 emotion-competence-status`,
-         `total indirect effect` = `a1b1 emotion-warmth-status` + `a2b2 emotion-competence-status`) 
-
-library(tidyr)
-library(ggthemes)
-library(tidybayes)
-
-post %>% 
-  pivot_longer(cols = `a1 emotion-warmth`:`total indirect effect`) %>%
-  group_by(name) %>% 
-  median_qi(value) %>% 
-  mutate_if(is.double, round, digits = 3)
 ```
 
 ```{r fig-main, eval = T, fig.cap="Descriptive plots of **A.** status conferral, **B.** competence, **C.** warmth, and **D.** Out of control per target gender and emotion.", fig.width=8, fig.asp=.8}
@@ -831,7 +781,7 @@ plotdat2$Rater <- plotdat2$rater.gender
 ```
 
 ```{r rater-analysis, cache=TRUE}
-bayes.rater <- doBayesModerators(dat, dat$status, rscale, dat$rater.gender, pos = F)
+bayes.rater <- doBayesModerators2(dat, dat$status, rscale, dat$rater.gender, pos = F)
 ```
 
 ```{r rater-analysis-split}
@@ -906,28 +856,28 @@ plotdat3 <- dat
 
 ```{r moderator-analyses, cache=T}
 # News exposure increases status conferral to women relative to men
-bayes.nes <- doBayesModerators(dat, dat$status, rscale, dat$nes, pos=F)
+bayes.nes <- doBayesModerators2(dat, dat$status, rscale, dat$nes, pos=F)
 # Beliefs about gender inequality in the workplace increase status conferral to women relative to men
-bayes.bgw <- doBayesModerators(dat, dat$status, rscale, dat$bgw, pos=F)
+bayes.bgw <- doBayesModerators2(dat, dat$status, rscale, dat$bgw, pos=F)
 # Sexist beliefs decrease status conferral to women relative to men
-bayes.sb <- doBayesModerators(dat, dat$status, rscale, dat$sb, pos=T)
+bayes.sb <- doBayesModerators2(dat, dat$status, rscale, dat$sb, pos=T)
 # Internation motivation to respond without sexism increases status conferral to women relative to men
-bayes.im <- doBayesModerators(dat, dat$status, rscale, dat$im, pos=F)
+bayes.im <- doBayesModerators2(dat, dat$status, rscale, dat$im, pos=F)
 
 # Models for perspective 4: self-presentation goals and study savviness
 
 # External motivation to respond without sexism predicts more status conferral to women relative to men
-bayes.em <- doBayesModerators(dat, dat$status, rscale, dat$em, pos=F)
+bayes.em <- doBayesModerators2(dat, dat$status, rscale, dat$em, pos=F)
 # Number of research studies participated in predicts more status conferral to women relative to men
-bayes.ns <- doBayesModerators(dat, dat$status, rscale, dat$studies, pos=F)
+bayes.ns <- doBayesModerators2(dat, dat$status, rscale, dat$studies, pos=F)
 # Having participated in a similar study predicts more status conferral to women relative to men
-bayes.sim <- doBayesModerators(dat, dat$status, rscale, dat$similar, pos=F)
+bayes.sim <- doBayesModerators2(dat, dat$status, rscale, dat$similar, pos=F)
 # Having taken a psychology course predicts more status conferral to women relative to men
-bayes.psy <- doBayesModerators(dat, dat$status, rscale, dat$psy, pos=F)
+bayes.psy <- doBayesModerators2(dat, dat$status, rscale, dat$psy, pos=F)
 # Awareness of hypothesis being about gender predicts more status conferral to women relative to men
-bayes.awaregen <- doBayesModerators(dat, dat$status, rscale, dat$aware.gender, pos=F)
+bayes.awaregen <- doBayesModerators2(dat, dat$status, rscale, dat$aware.gender, pos=F)
 # Awareness of hypothesis being about emotion predicts more status conferral to women relative to men
-bayes.awareemo <- doBayesModerators(dat, dat$status, rscale, dat$aware.emotion, pos=F)
+bayes.awareemo <- doBayesModerators2(dat, dat$status, rscale, dat$aware.emotion, pos=F)
 ```
 
 ```{r moderator-table1}
@@ -1008,7 +958,7 @@ dat.student <- dat
 ```
 
 ```{r student-analysis, cache=TRUE}
-bayes.student <- doBayesModerators(dat, dat$status, rscale, dat$student, pos = T)
+bayes.student <- doBayesModerators2(dat, dat$status, rscale, dat$student, pos = T)
 ```
 
 __*General public vs. students.*__ Finally, we assessed whether students and adults from the general public differed in the extent to which they applied (reversed) gender stereotyping. The student vs. general public status was determined at the individual level (rather than the sample level) based on responses to the item 'Are you currently a university student?'. However, again the individual differences-only model (main effect of student status) outperformed all other models including those with a moderating effect of student status (BF$_{im}=$ `r myformat(bayes.student$bfsID[3])`; see also Figure \@ref(fig:fig-student)). 
@@ -1058,9 +1008,9 @@ rho.extremeb <- correlationBF(dat.anger$perc.anger, dat.anger$status, posterior 
 bayes.approp <- as.vector(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)))[1]
 rho.approp <- correlationBF(dat.anger$approp, dat.anger$status, posterior = TRUE, iterations = 10000)
 #dominance 
-bayes.dominance <- doBayesModerators(dat, dat$status, rscale, dat$dominant, pos = T)
+bayes.dominance <- doBayesModerators2(dat, dat$status, rscale, dat$dominant, pos = T)
 #warmth 
-bayes.warmth.mod <- doBayesModerators(dat, dat$status, rscale, dat$warm, pos = F)
+bayes.warmth.mod <- doBayesModerators2(dat, dat$status, rscale, dat$warm, pos = F)
 
 ```
 
@@ -1173,49 +1123,49 @@ do.multiverse = function(dat, rscale, bayes.main){
   
   d <- dat[dat$pass.1==1,]
   subs[1] <- nrow(d)
-  bayes.multiverse[[1]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[1]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.2==1,]
   subs[2] <- nrow(d)
-  bayes.multiverse[[2]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[2]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.4==1,]
   subs[3] <- nrow(d)
-  bayes.multiverse[[3]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[3]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.5==1,]
   subs[4] <- nrow(d)
-  bayes.multiverse[[4]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[4]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.2==1,]
   subs[5] <- nrow(d)
-  bayes.multiverse[[5]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[5]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.4==1,]
   subs[6] <- nrow(d)
-  bayes.multiverse[[6]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[6]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.5==1,]
   subs[7] <- nrow(d)
-  bayes.multiverse[[7]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[7]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.2==1&dat$pass.4==1,]
   subs[8] <- nrow(d)
-  bayes.multiverse[[8]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[8]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.2==1&dat$pass.5==1,]
   subs[9] <- nrow(d)
-  bayes.multiverse[[9]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[9]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.4==1&dat$pass.5==1,]
   subs[10] <- nrow(d)
-  bayes.multiverse[[10]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[10]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.4==1,]
   subs[11] <- nrow(d)
-  bayes.multiverse[[11]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[11]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.5==1,]
   subs[12] <- nrow(d)
-  bayes.multiverse[[12]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[12]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.4==1&dat$pass.5==1,]
   subs[13] <- nrow(d)
-  bayes.multiverse[[13]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[13]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.2==1&dat$pass.4==1&dat$pass.5==1,]
   subs[14] <- nrow(d)
-  bayes.multiverse[[14]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[14]] <- doBayes2(d, d$status, rscale)
   d <- dat[dat$pass.1==1&dat$pass.2==1&dat$pass.4==1&dat$pass.5==1,]
   subs[15] <- nrow(d)
-  bayes.multiverse[[15]] <- doBayes(d, d$status, rscale)
+  bayes.multiverse[[15]] <- doBayes2(d, d$status, rscale)
   
   subs[16] <- nrow(dat)
   bayes.multiverse[[16]] <- bayes.main
@@ -1340,36 +1290,6 @@ bfs.multi.status <- sapply(multiverse.status$bayes.multiverse, function(x) x$bfs
 
 tab.status <- data.frame(Comparison = modnames, BFs = bfs.multi.status)
 row.names(tab.status) <- NULL
-```
-
-```{r multiverse-fig, eval=FALSE, fig.width=6, fig.asp=.8, fig.cap="Results from the multiverse analysis: Bayes factors in favor of a theoretical perspective are above the horizontal line, Bayes factors against the theoretical perspectives (in favor of the intercepts-only baseline model) are below the horizontal line. The color of the points reflects different theoretical perspectives and the x-axis reflects the number of participants the analysis is based on. The majority of analyses provide evidence against the theoretical perspectives."}
-# figure of multiverse with n on x-axis and BF for the 3 different theories vs the baseline model on the y-axis
-dd <- tab.status[1:3,]
-dd <- reshape(dd, varying = list(2:17), direction = "long")
-dd$n <- rep(multiverse.status$subs, each=3)
-cols <- RColorBrewer::brewer.pal(5,"Dark2")
-yrange <- c(pretty(range(dd$BFs.1))[1], length(pretty(range(dd$BFs.1)))+1)
-par(las=1, font.main= 1
-    , cex.axis = 1
-    , cex.main = 1.2
-    , mar=c(4, 4, 2, 2) + 0.2)
-plot(dd$n, dd$BFs.1, 
-     ylim = yrange,
-     xlim = pretty(range(subs))[c(1,length(pretty(range(subs))))], 
-     axes=F, xlab="Sample Size", ylab="", type = "n")
-abline(h=1, lty=1)
-points(dd$n,dd$BFs.1
-       , pch=19
-       , col=alpha(cols[dd$id],0.6)
-       ,cex=1.2)
-axis(1,at=pretty(range(subs)))
-axis(2)
-title(ylab = expression(BF["theory vs. baseline"]))    
-legend("topright", legend = c("Gender Stereotyping", "Status Signalling", "Culture Change/Study Savviness"), 
-         col = alpha(cols[dd$id],0.6), pch = 19, bty = "n")
-
-
-
 ```
 
 ```{r multiverse-tab-competence,eval=T}
@@ -1630,7 +1550,7 @@ dat.single$gender <- as.factor(dat.single$gender)
 # renumber site indicators (for multilevel models) 
 dat.single$site <- as.numeric(as.factor(dat.single$site))
 dat.single <- arrange(dat.single, site) 
-bayes.status.single <- doBayes(dat.single, dat.single$status, rscale)
+bayes.status.single <- doBayes2(dat.single, dat.single$status, rscale)
 multiverse.status.single = do.multiverse(dat, rscale, bayes.status.single)
 ```
 
@@ -1786,8 +1706,8 @@ Cell means are calculated based using the estimated parameters; for the not-angr
 To satisfy the theoretical predictions, the following inequality constraints have to hold:
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 1} > Y_{\cdot \cdot 1 2} \\
-Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\bar{Y}_{\cdot \cdot \cdot 1 1} > \bar{Y}_{\cdot \cdot \cdot 1 2} \\
+\bar{Y}_{\cdot \cdot \cdot 2 2} > \bar{Y}_{\cdot \cdot \cdot 2 1}
 \end{aligned}
 \]
 
@@ -1797,8 +1717,8 @@ The status signaling perspective applies the same model and parameters as the ge
 Here, the cell mean of the angry men condition needs to be higher than the not-angry men condition and the cell mean of the angry women condition needs to be higher than the cell mean of the not-angry women condition. To meet this condition, the following inequality constraints have to hold:
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 2} > Y_{\cdot \cdot 1 1} \\
-Y_{\cdot \cdot 2 2} > Y_{\cdot \cdot 2 1}
+\bar{Y}_{\cdot \cdot \cdot 1 2} > \bar{Y}_{\cdot \cdot \cdot 1 1} \\
+\bar{Y}_{\cdot \cdot \cdot 2 2} > \bar{Y}_{\cdot \cdot \cdot 2 1}
 \end{aligned}
 \]
 
@@ -1819,8 +1739,8 @@ The theoretical perspective entails that the cell mean of the angry women condit
 The anger suppresses warmth model applies the same model and parameters as the status signaling model, but constrains the emotion parameters in exactly the opposite direction:  
 \[
 \begin{aligned}
-Y_{\cdot \cdot 1 2} < Y_{\cdot \cdot 1 1} \\
-Y_{\cdot \cdot 2 2} < Y_{\cdot \cdot 2 1}
+\bar{Y}_{\cdot \cdot \cdot 1 2} < \bar{Y}_{\cdot \cdot \cdot 1 1} \\
+\bar{Y}_{\cdot \cdot \cdot 2 2} < \bar{Y}_{\cdot \cdot \cdot 2 1}
 \end{aligned}
 \]
 
