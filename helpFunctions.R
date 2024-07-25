@@ -354,7 +354,7 @@ plotter <- function(samp, range, countries, colors, main, labs,
   m <- apply(samp, 2, mean)
   q <- apply(samp, 2, quantile, c(.025,.975))
   #cols <- RColorBrewer::brewer.pal(9, "Set1")
-  ylabs="Design"
+  ylabs="Material Set"
   if(noylab){ylabs=""}
   mar_1 <- ifelse(noylab, 6, 4)
   
@@ -584,6 +584,72 @@ doBayes2 = function(dat, y, r){
   names(bfsb) <- modnamesb
   
   return(list(bfsu=bfsu, bfs0=bfs0, bfsb=bfsb, sampFull=sampMain, musm = musm))
+}
+
+doRandom2 = function(dat, y, r){
+  ############Design matrices
+  design <- dat$design
+  I <- max(design)
+  # Indicator variables for the full model, using effect coding 
+  xk <- ifelse(dat$gender == "female", -1/2, 1/2) #effect of target gender
+  xl <- ifelse(dat$emotion == "neutral", -1/2, 1/2) #effect of target emotion
+  xkl <- xk*xl*2 #gender-by-emotion interaction effect
+  
+  # Random intercepts for all models 
+  xrand <- xkrand <- xlrand <- xklrand <- matrix(0, nrow = nrow(dat), ncol = I)
+  for(i in 1:nrow(dat)){
+    xrand[i, design[i]] <- 1
+    xkrand[i, design[i]] <- xk[i]
+    xlrand[i, design[i]] <- xl[i]
+    xklrand[i, design[i]] <- xkl[i]
+  }
+  
+  Xmat <- cbind(xkrand, xlrand, xklrand, xk, xl, xkl, xrand) #design matrix for the gender stereotype and status signalling models including random site intercept
+  
+  #sample from the unconstrained model gender stereotype and status signalling model and get BF
+  samp <- nWayAOV(y, Xmat
+                  , gMap = c(rep(0:2, each=I), 3:5, rep(6, I)), rscale = c(r[4], r[4], r[4], r[1], r[1], r[2], r[3])
+                  , posterior = T)
+  BF <- nWayAOV(y, Xmat
+                , gMap = c(rep(0:2, each=I), 3:5, rep(6, I)), rscale = c(r[4], r[4], r[4], r[1], r[1], r[2], r[3])
+                , posterior = F)
+  # get BF for the null model
+  BFNull <- nWayAOV(y, xrand
+                    , gMap = rep(0, I), rscale = c(r[3])
+                    , posterior = F)
+  
+  ## Posterior samples for the cell means
+  xk.i <- 1:I
+  xl.i <- (I+1):(2*I)
+  xkl.i <- (2*I+1):(3*I)
+  xk0.i <- 3*I+1
+  xl0.i <- 3*I+2
+  xkl0.i <- 3*I+3
+  xrand.i <- (3*I+4):(4*I+3)
+  
+  # Calculate estimated cell means for each iteration from the main model samples
+  neutral   <- -1/2
+  angry <- 1/2
+  women <- -1/2
+  men   <- 1/2
+  
+  rand <- samp[, xrand.i+1] + samp[, 1]
+  gen  <- samp[, xk.i+1] + samp[, xk0.i+1]
+  emo  <- samp[, xl.i+1] + samp[, xl0.i+1]
+  int  <- samp[, xkl.i+1] + samp[, xkl0.i+1]
+  
+  musw <- rand + women * gen + neutral * emo + women * neutral * 2 * int
+  muaw <- rand + women * gen + angry * emo + women * angry * 2 * int
+  musm <- rand + men * gen + neutral * emo + men * neutral * 2 * int
+  muam <- rand + men * gen + angry * emo + men * angry * 2 * int
+  musm <- list(musw, muaw, musm, muam)
+  # colMeans(mus)
+  
+  BF_0r <- exp(BFNull$bf - BF$bf)
+  
+  return(list(BF_0r=BF_0r, samp=samp, musm = musm,
+              alphas = rand, betas = gen, 
+              gammas = emo, thetas = int))
 }
 
 doBayesModerators2 = function(dat, y, r, mod, pos=T){

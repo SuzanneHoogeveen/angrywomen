@@ -203,14 +203,16 @@ man_dat$gender <- as.factor(man_dat$gender)
 man_dat$site <- as.numeric(as.factor(man_dat$site))
 man_dat <- arrange(man_dat, site) 
 
-mc.anger <- as.vector(ttestBF(formula = perc.anger ~ emotion, data = man_dat, nullInterval = c(0,Inf)))[1]
-samp.mc.anger <- ttestBF(formula = perc.anger ~ emotion, data = man_dat, posterior=T, iterations=5000)
-mc.sadness <- as.vector(ttestBF(formula = perc.sadness ~ emotion, data = man_dat, nullInterval = c(-Inf,0)))[1]
-samp.mc.sadness <- ttestBF(formula = perc.sadness ~ emotion, data = man_dat, posterior=T, iterations=5000)
+# mc.anger <- as.vector(ttestBF(formula = perc.anger ~ emotion, data = man_dat, nullInterval = c(0,Inf)))[1]
+mc.anger.bf <- apa_print(ttestBF(formula = perc.anger ~ emotion, data = man_dat, nullInterval = c(0,Inf)), mcmc_error = F, standardized = T)
+# samp.mc.anger <- ttestBF(formula = perc.anger ~ emotion, data = man_dat, posterior=T, iterations=5000)
+# mc.sadness <- as.vector(ttestBF(formula = perc.sadness ~ emotion, data = man_dat, nullInterval = c(-Inf,0)))[1]
+mc.sadness.bf <- apa_print(ttestBF(formula = perc.sadness ~ emotion, data = man_dat, nullInterval = c(-Inf,0)), mcmc_error = F, standardized = T)
+# samp.mc.sadness <- ttestBF(formula = perc.sadness ~ emotion, data = man_dat, posterior=T, iterations=5000)
 ```
 
 As a manipulation check, we assessed whether the target in the *anger* condition was indeed perceived as more angry than the target in the *not-angry* (neutral or sadness) condition and vice versa for sadness. 
-The independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with anger expressions are perceived as more angry than targets with not-angry (sadness or neutral) expressions (BF$_{+0} = \infty$, $\delta$ = `r printnum(median(samp.mc.anger[,"delta"]))`). Similarly, the independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with not-angry expressions are perceived as more sad than targets with angry expressions (BF$_{-0} = \infty$, $\delta$ = `r printnum(median(samp.mc.sadness[,"delta"]))`). See Figure \@ref(fig:fig-manipulation) for a plot of the data. 
+The independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with anger expressions are perceived as more angry than targets with not-angry (sadness or neutral) expressions (`r mc.anger.bf$full_result$interval`). Similarly, the independent samples Bayesian t-test gives infinite evidence in favor of the hypothesis that targets with not-angry expressions are perceived as more sad than targets with angry expressions (`r mc.sadness.bf$full_result$interval`). See Figure \@ref(fig:fig-manipulation) for a plot of the data. 
 
 
 ## Primary Theoretical Tests
@@ -273,10 +275,11 @@ bayes.control <- doBayes2(dat, dat$control, rscale)
 dat.dvs <- dat
 ```
 
-```{r fig-main, eval = T, fig.cap="Descriptive plots of **A.** status conferral, **B.** competence, **C.** warmth, and **D.** Out of control per target gender and emotion.", fig.width=8, fig.asp=.8}
+```{r fig-main, eval = T, fig.cap="Descriptive plots of **A.** status conferral, **B.** competence, **C.** warmth, and **D.** Out of control per target gender and emotion. Error bars represent standard errors.", fig.width=8, fig.asp=.8}
 par(mfrow = c(2,2), mgp = c(2, .7, 0)+0.1)
 
 apa_lineplot(data = plotdat
+             , dispersion = se
              , cex = 0.8
              , id = "subj"
              , factors = c("gender", "emotion")
@@ -292,6 +295,7 @@ apa_lineplot(data = plotdat
                                   , legend = c("angry", "non-angry")))
 
 apa_lineplot(data = dat.dvs
+             , dispersion = se
              , cex = 0.8
              , id = "subj"
              , factors = c("gender", "emotion")
@@ -306,6 +310,7 @@ apa_lineplot(data = dat.dvs
                                   , title = "Emotion Condition"
                                   , legend = c("angry", "non-angry")))
 apa_lineplot(data = dat.dvs
+             , dispersion = se
              , cex = 0.8
              , id = "subj"
              , factors = c("gender", "emotion")
@@ -320,6 +325,7 @@ apa_lineplot(data = dat.dvs
                                   , title = "Emotion Condition"
                                   , legend = c("angry", "non-angry")))
 apa_lineplot(data = dat.dvs
+             , dispersion = se
              , cex = 0.8
              , id = "subj"
              , factors = c("gender", "emotion")
@@ -336,7 +342,7 @@ apa_lineplot(data = dat.dvs
 
 ```
 
-__*Competence.*__ For competence ratings, we find most evidence for the unconstrained model, which strongly outperforms the baseline model: BF$_{ub}=$ `r myformat(bayes.competence$bfsb[4])`. The pattern of results shows that, in contrast to the Status Signalling and Gender Stereotyping perspectives, both angry men ($M_{angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`) and women ($M_{angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="angry"], na.rm=T),2)`) are considered *less* competent than neutral/sad men ($M_{not-angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`) and women ($M_{not-angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="neutral"], na.rm=T),2)`; see also Figure \@ref(fig:fig-main)B). 
+__*Competence.*__ For competence ratings, we find most evidence for the unconstrained model, which strongly outperforms the baseline model: BF$_{ub}=$ `r myformat(bayes.competence$bfsb[4])`. The pattern of results shows that, in contrast to the Status Signalling and Gender Stereotyping perspectives, both angry men ($M_{angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`) and women ($M_{angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="angry"], na.rm=T),2)`) are considered *less* competent than neutral/sad men ($M_{not-angry\ male}=$ `r round(mean(dat$competence[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`) and women ($M_{not-angry\ female}=$ `r round(mean(dat$competence[dat$gender=="female"&dat$emotion=="neutral"], na.rm=T),2)`; see also Figure \@ref(fig:fig-main)B).^[Here we report only sample means and refer readers to Figure \@ref(fig:fig-main) for standard errors.]
 
 __*Warmth.*__
 As expected, for perceived warmth, we find most evidence for the 'Anger suppresses warmth' perspective; angry targets ($M_{angry\ male}=$ `r round(mean(dat$warmth[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`, $M_{angry\ female}=$ `r round(mean(dat$warmth[dat$gender=="female"&dat$emotion=="angry"], na.rm=T),2)`) are perceived as less warm than sad/neutral targets ($M_{not-angry\ male}=$ `r round(mean(dat$warmth[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`, $M_{not-angry\ female}=$ `r round(mean(dat$warmth[dat$gender=="female"&dat$emotion=="neutral"], na.rm=T),2)`) , regardless of gender: BF$_{wb}=$ `r myformat(bayes.warmth$bfsb[6])` (see also Figure \@ref(fig:fig-main)C). 
@@ -345,9 +351,9 @@ __*Out of Control.*__
 For the out-of-control ratings, we expected most evidence for the Gender Stereotyping model such that anger increases out-of-control ratings for female targets, compared to non-angry targets and angry male targets. The results, however, showed most evidence for the Status Signalling perspective; BF$_{sb}=$ `r myformat(bayes.control$bfsb[2])`: both angry men ($M_{angry\ male}=$ `r round(mean(dat$control[dat$gender=="male"& dat$emotion=="angry"], na.rm=T),2)`) and women ($M_{angry\ female}=$ `r round(mean(dat$control[dat$gender=="female"& dat$emotion=="angry"], na.rm=T),2)`) are considered more out of control than not-angry men ($M_{not-angry\ male}=$ `r round(mean(dat$control[dat$gender=="male"& dat$emotion=="neutral"], na.rm=T),2)`) and women ($M_{not-angry\ female}=$ `r round(mean(dat$control[dat$gender=="female"& dat$emotion=="neutral"], na.rm=T),2)`; see Figure \@ref(fig:fig-main)D). 
 
 ```{r table-all}
-bfs0.competence <- c(bayes.competence$bfsb[1:5],0)
-bfs0.warmth <- bayes.warmth$bfsb
-bfs0.control <- c(bayes.control$bfsb[1:5],0)
+bfs0.competence <- c(bayes.competence$bfsb[1:5],0)[-5]
+bfs0.warmth <- bayes.warmth$bfsb[-5]
+bfs0.control <- c(bayes.control$bfsb[1:5],0)[-5]
 
 makeLargestBold <- function(bfs){
   largest <- which(bfs == max(bfs))
@@ -359,17 +365,17 @@ makeLargestBold <- function(bfs){
 }
 
 apa_table(data.frame(Comparison = names(bfs0.warmth), 
-                     Status = c(makeLargestBold(bayes.status$bfsb)[1:5],"--"), 
-                     Competence = c(makeLargestBold(bfs0.competence)[1:5],"--"), 
+                     Status = c(makeLargestBold(bayes.status$bfsb)[1:4],"--"), 
+                     Competence = c(makeLargestBold(bfs0.competence)[1:4],"--"), 
                      Warmth = makeLargestBold(bfs0.warmth), 
-                     `Out of control` = c(makeLargestBold(bfs0.control)[1:5],"--")),
-          col_spanners = list(`Bayes Factors` = c(2,5)),
+                     `Out of control` = c(makeLargestBold(bfs0.control)[1:4],"--")),
+          col_spanners = list(`Dependent variables` = c(2,5)),
           col.names = c("Comparison", "Status","Competence","Warmth","Out of Control"),
           row.names = FALSE,
           align = c("l","c","c","c","c"),
-          caption = "Evidence for the theoretical models vs. the baseline (intercepts only) models for the different dependent variables. ", 
+          caption = "Bayes factors for the theoretical models vs. the baseline (intercepts only) models for the different dependent variables. ", 
           escape=F,
-          note = "The best-predicting model per dependent variable is indicated in bold. For status conferral, all of the theoretical models perform worse than the baseline model. Note that the baseline model includes random intercepts for labs and for designs, while the null model only includes random intercepts for labs.")
+          note = "The best-predicting model per dependent variable is indicated in bold. For status conferral, all of the theoretical models perform worse than the baseline model.")
 ```
 
 ## Primary Methodological Tests
@@ -380,13 +386,13 @@ __*Varying effects model.*__ For the primary analyses, we constructed simple com
 designs <- dat %>% group_by(design) %>% summarize(design = design[1])
 designs <- designs$design
 # varying effects model (target gender and emotion effects)
-bayes.re <- doRandom(dat, dat$status, rscale)
+bayes.re <- doRandom2(dat, dat$status, rscale)
 ```
 
 ```{r varying-models-dvs, cache=T}
-bayes.re.comp <- doRandom(dat.dvs, dat.dvs$competence, rscale)
-bayes.re.warm <- doRandom(dat.dvs, dat.dvs$warmth, rscale)
-bayes.re.cont <- doRandom(dat.dvs, dat.dvs$control, rscale)
+bayes.re.comp <- doRandom2(dat.dvs, dat.dvs$competence, rscale)
+bayes.re.warm <- doRandom2(dat.dvs, dat.dvs$warmth, rscale)
+bayes.re.cont <- doRandom2(dat.dvs, dat.dvs$control, rscale)
 ```
 
 ```{r varying-details}
@@ -424,7 +430,7 @@ n.angry.cont <- which(q[1,]>0)
 Figure \@ref(fig:plotter-comp) shows the intercepts and varying effects across design for competence ratings as the outcome measure. In line with the Bayes factor analysis providing most evidence for the unconstrained model, the pattern in panel C displays a *negative* effect of anger vs. non-anger across `r length(n.nonangry.comp)` designs (i.e., an effect opposite to predictions by the Status Signalling perspective). None of the designs show a target gender effect or a gender-by-emotion interaction effect. As predicted by the 'Anger suppresses warmth' perspective, a similar pattern emerges for perceived warmth in Figure \@ref(fig:plotter-warmth): across `r length(n.nonangry.warm)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with non-angry targets considered warmer than angry targets. In addition, across `r length(n.female.warm)` designs, female targets are considered warmer than male targets, while for `r length(n.male.warm)` designs, male targets are considered warmer than female targets. Finally, in `r length(n.stereo.warm)` designs, a gender stereotype effect is observed such that an angry male target is considered warmer than a non-angry male targets and an angry female target, while an angry female target is considered less warm than a non-angry female target and an angry male target. 
 For out-of-control ratings, a reverse pattern for the target emotion effect is shown in Figure \@ref(fig:plotter-control): across `r length(n.angry.cont)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with angry targets considered more out of control than non-angry targets. 
 
-```{r plotter, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on status conferral, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. Only the target gender effect seem to differ from zero for some designs."}
+```{r plotter, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on status conferral on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. Only the target gender effect seem to differ from zero for some designs."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -435,7 +441,7 @@ plotter(bayes.re$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emot
 
 ```
 
-```{r plotter-comp, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on competence, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. A target emotion effect emerges across about half of the designs, yet in the direction opposite as predicted by the Status Signalling perspective."}
+```{r plotter-comp, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on competence on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. A target emotion effect emerges across about half of the designs, yet in the direction opposite as predicted by the Status Signalling perspective."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -445,7 +451,7 @@ plotter(bayes.re.comp$gammas, c(-2,2), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.comp$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-warmth, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on warmth, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Anger Suppresses Warmth perspective, a target emotion effect emerges across most designs."}
+```{r plotter-warmth, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on warmth on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Anger Suppresses Warmth perspective, a target emotion effect emerges across most designs."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -455,7 +461,7 @@ plotter(bayes.re.warm$gammas, c(-4,1), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.warm$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-control, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on out-of-control ratings, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Status Signalling perspective, a target emotion effect emerges across about half of the designs."}
+```{r plotter-control, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on out-of-control ratings on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Status Signalling perspective, a target emotion effect emerges across about half of the designs."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -465,7 +471,7 @@ plotter(bayes.re.cont$gammas, c(-1,3), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.cont$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-combined, fig.width=6.5, fig.asp=1.4, fig.cap="Estimated design-level effects (posterior means), in increasing order. \\textbf{A.} Target gender effect on status conferral. \\textbf{B.} Target emotion effects on status conferral. \\textbf{C.} Target gender-by-emotion interaction effect on status conferral. \\textbf{D.} Target emotion effects on warmth. \\textbf{E.} Target emotion effect on competence. \\textbf{F.} Target emotion effect on out-of-control ratings. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red."}
+```{r plotter-combined, fig.width=6.5, fig.asp=1.4, fig.cap="Estimated design-level effects (posterior means) on the response scale of 1 to 11, in increasing order. \\textbf{A.} Target gender effect on status conferral. \\textbf{B.} Target emotion effects on status conferral. \\textbf{C.} Target gender-by-emotion interaction effect on status conferral. \\textbf{D.} Target emotion effects on warmth. \\textbf{E.} Target emotion effect on competence. \\textbf{F.} Target emotion effect on out-of-control ratings. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red."}
 par(mfrow=c(3,2))
 plotter(bayes.re$betas,  c(-1.5,1.5), designs, colors, main = "A. Target Gender Effect on Status Conferral", labs = c("Female","Male"), effectcolors = TRUE)
 plotter(bayes.re$gammas, c(-1.5,1.5), designs, colors, main = "B. Target Emotion Effect on Status Conferral", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
@@ -557,11 +563,11 @@ bf.gen.format <- as.vector(bf.format)[best]/as.vector(bf.format)[6]
 
 dat.vid <- dat[dat$format=="video",]
 dat.oth <- dat[dat$format=="other",]
-bf.gen.vid <- as.vector(ttestBF(formula = status ~ gender, dat = dat.vid))[1]
-bf.gen.oth <- as.vector(ttestBF(formula = status ~ gender, dat = dat.oth))[1]
+bf.gen.vid <- apa_print(ttestBF(formula = status ~ gender, dat = dat.vid), mcmc_error = F)$full_result
+bf.gen.oth <- apa_print(ttestBF(formula = status ~ gender, dat = dat.oth), mcmc_error = F, reciprocal = T)$full_result
 ```
 
-In order to further unpack this potential effect of format, we conducted a Bayesian ANOVA with gender and format as factors plus their interaction. Indeed, we find that the data provide most evidence for the model that includes the factors gender and format, plus their interaction. Comparing the models with and without this interaction term gives a Bayes factor of `r myformat(bf.gen.format)` in favor or the gender-by-format interaction. As seen in Figure \@ref(fig:plot-design-moderators)B, the video format particularly increases status conferral to male targets. Indeed, if we look at designs with a video format and other designs separately, we find evidence in favor of a gender effect for video designs BF$_{10}=$ `r myformat(bf.gen.vid)` and evidence against a gender effect for the other designs (audio, scenarios, comic book): BF$_{10}=$ `r myformat(bf.gen.oth)`; BF$_{01}=$ `r myformat(1/bf.gen.oth)`. 
+In order to further unpack this potential effect of format, we conducted a Bayesian ANOVA with gender and format as factors plus their interaction. Indeed, we find that the data provide most evidence for the model that includes the factors gender and format, plus their interaction. Comparing the models with and without this interaction term gives a Bayes factor of `r myformat(bf.gen.format)` in favor of the gender-by-format interaction. As seen in Figure \@ref(fig:plot-design-moderators)B, the video format particularly increases status conferral to male targets. Indeed, if we look at designs with a video format and other designs separately, we find evidence in favor of a gender effect for video designs `r bf.gen.vid` and evidence against a gender effect for the other designs (audio, scenarios, comic book): `r bf.gen.oth`. 
 
 
 ```{r anger-extremity, cache=TRUE}
@@ -569,7 +575,7 @@ dat_sub <- subset(dat, design %in% c(mod.anger,ext.anger) & emotion == "angry")
 dat_sub$extremity <- ifelse(dat_sub$design %in% mod.anger, "mild","extreme")
 dat_sub$extremity <- as.factor(dat_sub$extremity)
 
-bf.anger.extr  <- as.vector(ttestBF(formula = status ~ extremity, data = dat_sub, nullInterval = c(-Inf,0)))[1]
+bf.anger.extr  <- apa_print(ttestBF(formula = status ~ extremity, data = dat_sub, nullInterval = c(-Inf,0)), mcmc_error = F, reciprocal = T)$full_result
 
 #renumber designs and sites
 dat_sub$design_num <- dat_sub$design
@@ -579,7 +585,7 @@ bayes.extremity.rand <- doRandomExtremity(dat_sub, dat_sub$status, rscale)
 ```
 
 __*Anger Extremity Hypothesis A.*__ We predicted that moderate levels of anger would lead to more status conferral than extreme anger for both targets. To this end, we compared status conferral to angry targets between designs that were identical except for the extremity of the displayed anger. 
-However, the data indicated that mild anger led to *less* status conferral compared to extreme anger ($M_{mild}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="mild"]),2)`); $M_{extreme}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="extreme"]),2)`). As the effect went in the opposite direction, the Bayes factor analysis also provided evidence against the anger extremity hypothesis: BF$_{10}=$ `r myformat(bf.anger.extr)`; BF$_{01}=$ `r myformat(1/bf.anger.extr)`. 
+However, the data indicated that mild anger led to *less* status conferral compared to extreme anger ($M_{mild}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="mild"]),2)`); $M_{extreme}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="extreme"]),2)`). As the effect went in the opposite direction, the Bayes factor analysis also provided evidence against the anger extremity hypothesis: `r bf.anger.extr`. 
 
 ## Secondary Theoretical Tests 
 
@@ -727,24 +733,24 @@ apa_table(tab,
 
 
 ```{r main-gender}
-bf.targ.gender <- as.vector(ttestBF(formula = status ~ gender, data = dat.dvs))[1]
-bf.targ.gender.comp <- as.vector(ttestBF(formula = competence ~ gender, data = dat.dvs))[1]
-bf.targ.gender.warm <- as.vector(ttestBF(formula = warmth ~ gender, data = dat.dvs))[1]
-bf.targ.gender.cont <- as.vector(ttestBF(formula = control ~ gender, data = dat.dvs))[1]
+bf.targ.gender <- apa_print(ttestBF(formula = status ~ gender, data = dat.dvs), mcmc_error = F, reciprocal = T)$full_result
+bf.targ.gender.comp <- apa_print(ttestBF(formula = competence ~ gender, data = dat.dvs), mcmc_error = F, reciprocal = T)$full_result
+bf.targ.gender.warm <- apa_print(ttestBF(formula = warmth ~ gender, data = dat.dvs), mcmc_error = F, reciprocal = T)$full_result
+bf.targ.gender.cont <- apa_print(ttestBF(formula = control ~ gender, data = dat.dvs), mcmc_error = F, reciprocal = T)$full_result
 ```
 
 __*Main effect of target.*__ Are male or female targets generally accorded more status? 
-We ran a simple independent-samples t-test to answer this question. In contrast to Study 1, female targets are accorded slightly *less* status than male targets ($M_{female}=$ `r round(mean(dat$status[dat$gender=="female"]),2)`; $M_{male}=$ `r round(mean(dat$status[dat$gender=="male"]),2)`), yet the Bayes factor analysis provides moderate evidence against the gender effect: BF$_{10}=$ `r myformat(bf.targ.gender)`; BF$_{01}=$ `r myformat(1/bf.targ.gender)` (Frequentist statistics: `r apa_print(t.test(status~gender, data=dat))$statistic`). For the other dependent variables, we also found evidence in favor of the null-hypotheses; for competence BF$_{10}=$ `r myformat(bf.targ.gender.comp)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.comp)`, for warmth BF$_{10}=$ `r myformat(bf.targ.gender.warm)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.warm)`, and for out-of-control BF$_{10}=$ `r myformat(bf.targ.gender.cont)`; BF$_{01}=$ `r myformat(1/bf.targ.gender.cont)`. 
+We ran a simple independent-samples t-test to answer this question. In contrast to Study 1, female targets are accorded slightly *less* status than male targets ($M_{female}=$ `r round(mean(dat$status[dat$gender=="female"]),2)`; $M_{male}=$ `r round(mean(dat$status[dat$gender=="male"]),2)`), yet the Bayes factor analysis provides moderate evidence against the gender effect: `r bf.targ.gender` (Frequentist statistics: `r apa_print(t.test(status~gender, data=dat))$statistic`). For the other dependent variables, we also found evidence in favor of the null-hypotheses; for competence `r bf.targ.gender.comp`, for warmth `r bf.targ.gender.warm`, and for out-of-control `r bf.targ.gender.cont`. 
 
 ```{r main-emotion}
-bf.targ.emo <- as.vector(ttestBF(formula = status ~ emotion, data = dat.dvs))[1]
-bf.targ.emo.comp <- as.vector(ttestBF(formula = competence ~ emotion, data = dat.dvs))[1]
-bf.targ.emo.warm <- as.vector(ttestBF(formula = warmth ~ emotion, data = dat.dvs))[1]
-bf.targ.emo.cont <- as.vector(ttestBF(formula = control ~ emotion, data = dat.dvs))[1]
+bf.targ.emo <- apa_print(ttestBF(formula = status ~ emotion, data = dat.dvs), mcmc_error = F, reciprocal = T)$full_result
+bf.targ.emo.comp <- apa_print(ttestBF(formula = competence ~ emotion, data = dat.dvs), mcmc_error = F, reciprocal = F)$full_result
+bf.targ.emo.warm <- apa_print(ttestBF(formula = warmth ~ emotion, data = dat.dvs), mcmc_error = F, reciprocal = F)$full_result
+bf.targ.emo.cont <- apa_print(ttestBF(formula = control ~ emotion, data = dat.dvs), mcmc_error = F, reciprocal = F)$full_result
 ```
 
 __*Main effect of emotion.*__ Are angry or not-angry targets generally accorded more status? 
-A simple independent-samples t-test showed evidence against a main effect of emotion on status conferral: BF$_{10}=$ `r myformat(bf.targ.emo)`; BF$_{01}=$ `r myformat(1/bf.targ.emo)` (Frequentist statistics: `r apa_print(t.test(status~emotion, data=dat))$statistic`). For the other dependent variables, we did find evidence in favor of a main effect of emotion; for competence BF$_{10}=$ `r myformat(bf.targ.emo.comp)`, for warmth BF$_{10}=$ `r myformat(bf.targ.emo.warm)`, and for out-of-control BF$_{10}=$ `r myformat(bf.targ.emo.cont)`. As becomes evident from Figure \@ref(fig:fig-main), for competence and warmth, angry targets are considered less competent and less warm than non-angry targets, respectively, and for out of control, angry targets are considered more out of control than non-angry targets.  
+A simple independent-samples t-test showed evidence against a main effect of emotion on status conferral: `r bf.targ.emo` (Frequentist statistics: `r apa_print(t.test(status~emotion, data=dat))$statistic`). For the other dependent variables, we did find evidence in favor of a main effect of emotion; for competence `r bf.targ.emo.comp`, for warmth `r bf.targ.emo.warm`, and for out-of-control `r bf.targ.emo.cont`. As becomes evident from Figure \@ref(fig:fig-main), for competence and warmth, angry targets are considered less competent and less warm than non-angry targets, respectively, and for out of control, angry targets are considered more out of control than non-angry targets.  
 
 
 ```{r dat-rater, eval = T}
@@ -785,12 +791,12 @@ bayes.rater <- doBayesModerators2(dat, dat$status, rscale, dat$rater.gender, pos
 ```
 
 ```{r rater-analysis-split}
-bf.targ.gender.women <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="female",]))[1]
-bf.targ.gender.men   <- as.vector(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="male",]))[1]
-bf.interaction.gender <- as.vector(generalTestBF(status ~ gender:rater.gender, data=dat))
+bf.targ.gender.women <- apa_print(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="female",]), mcmc_error = F, reciprocal = T)$full_result
+bf.targ.gender.men   <- apa_print(ttestBF(formula = status ~ gender, data = dat[dat$rater.gender=="male",]), mcmc_error = F, reciprocal = T)$full_result
+bf.interaction.gender <- apa_print(generalTestBF(status ~ gender:rater.gender, data=dat), mcmc_error = F, reciprocal = T)$full_result
 ```
 
-__*Gender of the rater.*__ Do male and female raters differentially display the main effects or interactions derived from the theoretical perspectives (e.g., do male or female raters particularly show gender stereotyping effects or reversed gender biases?). The Bayes factor analysis indicates that the data is slightly more likely under the null-model than under the moderator interaction model (which assumes a three-way interaction between target gender, target emotion, and rater gender): BF$_{0m}=$ `r myformat(bayes.rater$bfs0[4])`. In contrast to Study 1, there was no evidence that female participants accorded more status to female targets ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="female"])`) than to male targets ($M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="female"])`): BF$_{10}=$ `r bf.targ.gender.women`; BF$_{01}=$ `r 1/bf.targ.gender.women`. For male participants, the analysis indicated no evidence either way ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="male"])`; $M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="male"])`): BF$_{10}=$ `r bf.targ.gender.men`, BF$_{01}=$ `r 1/bf.targ.gender.men`. Again, there was no evidence for an interaction: BF$_{10}=$ `r bf.interaction.gender`, BF$_{01}=$ `r 1/bf.interaction.gender` (see also Figure  \@ref(fig:fig-rater)). 
+__*Gender of the rater.*__ Do male and female raters differentially display the main effects or interactions derived from the theoretical perspectives (e.g., do male or female raters particularly show gender stereotyping effects or reversed gender biases?). The Bayes factor analysis indicates that the data is slightly more likely under the null-model than under the moderator interaction model (which assumes a three-way interaction between target gender, target emotion, and rater gender): BF$_{0m}=$ `r myformat(bayes.rater$bfs0[4])`. In contrast to Study 1, there was no evidence that female participants accorded more status to female targets ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="female"])`) than to male targets ($M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="female"])`): `r bf.targ.gender.women`. For male participants, the analysis indicated no evidence either way ($M_{female}=$ `r mean(dat$status[dat$gender=="female"&dat$rater.gender=="male"])`; $M_{male}=$ `r mean(dat$status[dat$gender=="male"&dat$rater.gender=="male"])`): `r bf.targ.gender.men`. Again, there was no evidence for an interaction: `r bf.interaction.gender` (see also Figure  \@ref(fig:fig-rater)). 
 
 __*Individual differences.*__ Various individual difference moderators were included in the study in order to unpack any observed experimental effects. Specifically, scales related to beliefs about gender (in)equality as well as about self-presentation concerns were added to distinguish between perspective 3 and 4, which predict the same overall pattern of responses, yet driven by different factors. 
 
@@ -1002,10 +1008,10 @@ extremity.per.design <- sapply(designs, function(x) mean(dat$perc.anger[dat$desi
 ```{r secondary-analyses, cache=TRUE}
 dat.anger <- dat[dat$emotion=="angry",]
 #anger extremity b
-bayes.extremeb <- as.vector(correlationBF(dat.anger$perc.anger, dat.anger$status, nullInterval = c(-1,0)))[1]
+bayes.extremeb <- apa_print(correlationBF(dat.anger$perc.anger, dat.anger$status, nullInterval = c(-1,0)), mcmc_error = F, reciprocal = T)$full_result
 rho.extremeb <- correlationBF(dat.anger$perc.anger, dat.anger$status, posterior = TRUE, iterations = 10000)
 #appropriateness
-bayes.approp <- as.vector(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)))[1]
+bayes.approp <- apa_print(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)), mcmc_error = F, reciprocal = T)$full_result
 rho.approp <- correlationBF(dat.anger$approp, dat.anger$status, posterior = TRUE, iterations = 10000)
 #dominance 
 bayes.dominance <- doBayesModerators2(dat, dat$status, rscale, dat$dominant, pos = T)
@@ -1014,9 +1020,9 @@ bayes.warmth.mod <- doBayesModerators2(dat, dat$status, rscale, dat$warm, pos = 
 
 ```
 
-__*Anger extremity hypothesis B.*__ We expected that more extreme anger, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. In order to test this hypothesis, we ran a Bayesian correlation analysis with perceived anger and status conferral as variables on the subset of the data including only the anger condition. As we expected a negative relation, the interval was restricted to cover [-1,0]. The data, however, strongly favored the null-hypothesis: BF$_{10}=$ `r bayes.extremeb`; BF$_{01}=$ `r 1/bayes.extremeb` and the correlation coefficient was in fact slightly positive ($\rho=$ `r median(rho.extremeb)`).  
+__*Anger extremity hypothesis B.*__ We expected that more extreme anger, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. In order to test this hypothesis, we ran a Bayesian correlation analysis with perceived anger and status conferral as variables on the subset of the data including only the anger condition. As we expected a negative relation, the interval was restricted to cover [-1,0]. The data, however, strongly favored the null-hypothesis: `r bayes.extremeb` and the correlation coefficient was in fact slightly positive.  
 
-__*Appropriateness hypothesis.*__ Here we expected that less appropriate anger expressions, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. That is, we expected a positive correlation between appropriateness and status conferral in the anger-condition subset of the data. The data suggested that such a correlation was indeed present: BF$_{10}=$ `r myformat(bayes.approp)`, $\rho=$ `r median(rho.approp)`. 
+__*Appropriateness hypothesis.*__ Here we expected that less appropriate anger expressions, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. That is, we expected a positive correlation between appropriateness and status conferral in the anger-condition subset of the data. The data suggested that such a correlation was indeed present: `r bayes.approp`. 
 
 __*Target dominance hypothesis.*__ We expected more backlash against angry women in status conferral (i.e., a stronger interaction between target gender and emotion expression) to the extent the anger expression projects dominance. This means a moderating effect of dominance on the interaction between target gender and emotion. (Note that this hypothesis is unlikely given that we did not find evidence for a backlash effect against women in the first place.) Although the moderation-interaction model outperforms the individual-differences-only model (BF$_{mi}=$ `r 1/bayes.dominance$bfsID[3]`), the model performs worse than the experimental-effects-only model that excludes the crucial threeway interaction between gender, emotion, and perceived dominance: BF$_{me}=$ `r bayes.dominance$bfsID[2]/bayes.dominance$bfsID[3]`; BF$_{em}=$ `r bayes.dominance$bfsID[3]/bayes.dominance$bfsID[2]`. 
 
@@ -1447,16 +1453,16 @@ dat <- arrange(dat, site)
 
 # t-test for original design only 
 original <- subset(dat, design==27)
-bayes.original.gender <- as.vector(ttestBF(formula = status ~ gender, data = original))
+bayes.original.gender <- apa_print(ttestBF(formula = status ~ gender, data = original), mcmc_error = F, reciprocal = T)$full_result
 ```
 
 __*Target Gender Effect for the Brescoll and Uhlmann (2008) design across Studies 1 and 2.*__
-Our present Study 1 finds a tendency for greater to status attribution to women, whereas Study 2 finds greater status attribution to men. If we only consider the original design (i.e., design 27) in Study 2, we find no evidence for a target gender effect: BF$_{10}=$ `r bayes.original.gender`; BF$_{01}=$ `r 1/bayes.original.gender`, $M_{male}=$ `r mean(original$status[original$gender=="male"])`, $M_{female}=$ `r mean(original$status[original$gender=="female"])`. The absence of a gender difference in the original design can also be observed from Figure \@ref(fig:plot-design-moderators)E, where the target gender coefficient is almost exactly 0. 
+Our present Study 1 finds a tendency for greater to status attribution to women, whereas Study 2 finds greater status attribution to men. If we only consider the original design (i.e., design 27) in Study 2, we find no evidence for a target gender effect: `r bayes.original.gender`, $M_{male}=$ `r mean(original$status[original$gender=="male"])`, $M_{female}=$ `r mean(original$status[original$gender=="female"])`. The absence of a gender difference in the original design can also be observed from Figure \@ref(fig:plot-design-moderators)E, where the target gender coefficient is almost exactly 0. 
 
 ```{r gaertig_replication}
 gaertig <- subset(dat, design==7|design==8)
-bayes.gaertig <- as.vector(ttestBF(formula = status ~ design, data = gaertig))
-bayes.gaertig.dir <- as.vector(ttestBF(formula = status ~ design, data = gaertig, nullInterval = c(0,Inf)))[1]
+bayes.gaertig <- apa_print(ttestBF(formula = status ~ design, data = gaertig), mcmc_error = F, reciprocal = F)$full_result
+bayes.gaertig.dir <- apa_print(ttestBF(formula = status ~ design, data = gaertig, nullInterval = c(0,Inf)), mcmc_error = F, reciprocal = T)$full_result
 ```
 
 ```{r plot_gaertig}
@@ -1492,7 +1498,7 @@ ggdraw(p2)
 ```
 
 __*Anger Extremity Effect for the Gaertig et al. (2019) design.*__
-We conducted a directed Bayesian t-test to see if we can replicate Gaertig et al.'s finding that moderate anger leads to more status conferral than extreme anger (regardless of target gender), by looking at their design (i.e., 7&8) in isolation. However, the data indicate *less* status conferral to moderate anger ($M_{moderate}=$ `r mean(gaertig$status[gaertig$design=="7"])`) than to extreme anger ($M_{extreme}=$ `r mean(gaertig$status[gaertig$design=="8"])`). The directed Bayesian t-test confirms strong evidence against the hypothesis: BF$_{+0}=$ `r bayes.gaertig.dir`; BF$_{0+}=$ `r 1/bayes.gaertig.dir`. In fact, when we remove the directionality constraint, we get some moderate evidence for a difference (in the opposite direction): BF$_{10}=$ `r bayes.gaertig`. 
+We conducted a directed Bayesian t-test to see if we can replicate Gaertig et al.'s finding that moderate anger leads to more status conferral than extreme anger (regardless of target gender), by looking at their design (i.e., 7&8) in isolation. However, the data indicate *less* status conferral to moderate anger ($M_{moderate}=$ `r mean(gaertig$status[gaertig$design=="7"])`) than to extreme anger ($M_{extreme}=$ `r mean(gaertig$status[gaertig$design=="8"])`). The directed Bayesian t-test confirms strong evidence against the hypothesis: `r bayes.gaertig.dir`. In fact, when we remove the directionality constraint, we get some moderate evidence for a difference (in the opposite direction): `r bayes.gaertig`. 
 
 Relatedly, we explored how the Gaertig et al. (2019) design compared to the others that directly manipulated anger extremity. To unpack the anger extremity effect on status conferral, we estimated the overall status conferral per design, using varying intercepts per design and a fixed effect of the extremity manipulation. Figure \@ref(fig:plot-extremity) shows the estimated status conferral for the 18 designs in which extremity was manipulated directly, as well as the perceived anger extremity as rated by participants in the anger condition. Notably, the extremity effect (i.e., difference between the mild and extreme version) is the largest in the original Gaertig et al. (2019) design, yet in the opposite direction as found by Gaertig et al. (2019) Furthermore, while perceived anger extremity is consistently higher in the the extreme anger version of each design, the difference is clearly largest in the original Gaertig et al. design (7&8). 
 
@@ -1518,11 +1524,11 @@ plotter(bayes.extremity.rand$eff, c(4,9), designs.man.extremity, cols,
 
 ```{r mccormick}
 dat_mccormick <- subset(dat, design=="1"&emotion=="angry")
-bayes.mccormick <- as.vector(ttestBF(formula = status ~ gender, data = dat_mccormick, nullInterval = c(0,Inf)))[1]
+bayes.mccormick <- apa_print(ttestBF(formula = status ~ gender, data = dat_mccormick, nullInterval = c(0,Inf)), mcmc_error = F, reciprocal = F)$full_result
 ```
 
 __*Gender Effect for the McCormick-Huhn & Shields (2019) design.*__
-Here, we assessed whether the pattern in the original McCormick-Huhn & Shields (2019) storyboard design replicates, such that angry women are accorded *more* status than angry men. In the original McCormick-Huhn & Shields (2019) study, only anger conditions were included. To replicate their results, we ran a directed Bayesian t-test with target gender as independent variable on the subset of the data with design 1 and only the anger condition. The data indeed indicate slightly more status conferral to angry female ($M_{female}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="female"])`) than to angry male targets ($M_{male}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="male"])`). However, the directed Bayesian t-test suggests that these data are quite undiagnostic and provide only anecdotal the hypothesis: BF$_{+0}=$ `r bayes.mccormick`. Note that there are only `r sum(dat_mccormick$gender=="female")` participants in the angry female target condition and `r sum(dat_mccormick$gender=="male")` participants in the angry male target condition. 
+Here, we assessed whether the pattern in the original McCormick-Huhn & Shields (2019) storyboard design replicates, such that angry women are accorded *more* status than angry men. In the original McCormick-Huhn & Shields (2019) study, only anger conditions were included. To replicate their results, we ran a directed Bayesian t-test with target gender as independent variable on the subset of the data with design 1 and only the anger condition. The data indeed indicate slightly more status conferral to angry female ($M_{female}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="female"])`) than to angry male targets ($M_{male}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="male"])`). However, the directed Bayesian t-test suggests that these data are quite undiagnostic and provide only anecdotal for the hypothesis: `r bayes.mccormick`. Note that there are only `r sum(dat_mccormick$gender=="female")` participants in the angry female target condition and `r sum(dat_mccormick$gender=="male")` participants in the angry male target condition. 
 
 # An angry woman can get whatever she wants
 Here, we demonstrate how we can get the desired result of replicating the original Brescoll & Uhlmann (2008) result if we cherry-pick one of the many reasonable analysis paths. 
@@ -1724,7 +1730,7 @@ Here, the cell mean of the angry men condition needs to be higher than the not-a
 
 5. Culture Change/ Study Savviness: angry women are accorded more status than not-angry women, angry men and not-angry men. There is no effect of emotion for men. 
 \[Y_{ijkl} \sim N(\alpha_i + \eta_j + x_{4kl} \delta + x_{5kl} \eta, \sigma^2),\]
-where parameter $\delta$ is the effect of emotion for female targets, parameter $\eta$ is the effect of angry women versus men (both not-angry and angry). The indicator variables are $x_{4lm}$ (-1/2 for not-angry female targets and 1/2 for angry female targets, and 0 for men) and $x_{5lm}$ (-1/3 for men, 2/3 for angry women and 0 for not-angry women). 
+where parameter $\delta$ is the effect of emotion for female targets, parameter $\eta$ is the effect of angry women versus men (both not-angry and angry). The indicator variables are $x_{4lm}$ (-1/2 for not-angry female targets and 1/2 for angry female targets, and 0 for men) and $x_{5lm}$ (-1/3 for men, 2/3 for angry women and 0 for not-angry women, corresponding to Helmert contrast coding). 
 
 The theoretical perspective entails that the cell mean of the angry women condition needs to be higher than the not-angry women condition and higher than the cell means of the angry men and the not-angry men conditions. To meet this condition, we put inequality constraints on the parameters:
 \[
@@ -1916,6 +1922,7 @@ p8 <- cat_plot(fit, pred = psy, modx = gender, mod2 = Emotion, interval = T, int
 
 p7/p8
 ```
+
 ```{r moderator-plots5, fig.height=18, fig.asp=1, fig.cap="Moderation effects of self-presentation goals on status conferral.", fig.align="H"}
 # gender awareness
 fit <- lm(status ~ aware.gender * gender * Emotion, data = plotdat3)
