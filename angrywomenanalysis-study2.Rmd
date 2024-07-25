@@ -9,11 +9,13 @@ author:
     email         : "suzanne.j.hoogeveen@gmail.com"
     address       : ""
   - name          : "Julia M. Haaf"
-    affiliation   : "1"
+    affiliation   : "2"
 
 affiliation:
   - id            : "1"
-    institution   : "University of Amsterdam"
+    institution   : "Utrecht University"
+  - id            : "2"
+    institution   : "University of Potsdam"
 
 note: Version 3, 01/2022
 
@@ -40,7 +42,6 @@ lineno            : no
 mask              : false
 urlcolor          : blue
 
-lang              : "english"
 class             : man
 output            : papaja::apa6_pdf
 #output            : papaja::apa6_word
@@ -170,9 +171,11 @@ The variable *number of studies previously participated in* was heavily right-sk
 All analyses were conducted in R.
 We constructed hierarchical Bayesian regression models that reflect the predictions from the 5 substantive theories, as well as the null-model and an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. Note that as perspectives 3 and 4 make equal predictions regarding the overall pattern, there were 4 different theoretical models in total. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see Appendix for details). The relative predictive adequacy of these models as well as the unconstrained model was compared using Bayes factors, following the approach by @haaf2017developing, @rouder2019beyond and @haaf2018capturing. 
 
-In addition, we assessed the robustness of the findings to somewhat arbitrary analysis decisions by conducting a multiverse analysis [@steegen2016]: We intended to apply different data exclusion criteria related to language experience, a manipulation check, the validity of responses (straightlining on the included scales), perceived material quality, mode of administration (laptop, phone etc.), and a design-level manipulation check. However, as described below, straightlining criteria did not affect a substantial proportion of the sample (less than 2%) and was thus omitted as a separate path in the multiverse analysis. The preregistration for the analysis can be found at \url{https://osf.io/sh3vx/}. 
+In addition, we assessed the robustness of the findings to somewhat arbitrary analysis decisions by conducting a multiverse analysis [@steegen2016]: We intended to apply different data exclusion criteria related to language experience, a manipulation check, the validity of responses (straightlining on the included scales), perceived material quality, mode of administration (laptop, phone etc.), and a manipulation check on the level of material set. However, as described below, straightlining criteria did not affect a substantial proportion of the sample (less than 2%) and was thus omitted as a separate path in the multiverse analysis. The preregistration for the analysis can be found at \url{https://osf.io/sh3vx/}. 
 
 __*Prior settings.*__ We think small effects in the predicted direction may still be meaningful, especially with regard to gender bias where small biases can accumulate in terms of their consequences over time. We therefore used a scale of 0.25 for the effect of interest. A scale of 0.25 assumes an size effect that is 25% of the sampling noise (standard deviation), which is generally considered a small effect. For the variation between labs in the intercepts, we used a scale of 1. In the random-effects models we used a scale of 0.15 for site-specific variation in the effects of interest. 
+
+__*Statistical power.*__ Please note that for the Bayesian analyses conducted here, the concept of power does not hold. Since we are never making the explicit decision to (fail to) reject the null model, we can also not make a wrong decision. Additionally, the Bayes factor approach allows us to distinguish between absence of evidence and evidence of absence of an effect. Therefore, when Bayes factors are large, the analysis can be considered conclusive. If many Bayes factors are inconclusive, this may be a sign that more data are needed to distinguish between the models.
 
 # Results
 
@@ -228,7 +231,7 @@ bfsb.status <- bayes.status$bfsb[1:5]
 diff.emo.men <- bayes.status$musm[,"muam"] - bayes.status$musm[,"musm"]
 diff.emo.women <- bayes.status$musm[,"muaw"] - bayes.status$musm[,"musw"]
 
-modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets")
 
 # get BFs for status signalling vs other models
 bfss.status <- bfs.status[4]/bfs.status
@@ -236,7 +239,7 @@ bfss.status <- c(bfss.status[c(3,5)],bfs.status[4],bfss.status[c(2,1)])
 ```
 
 __*Status Conferral.*__
-Based on the Bayes factor model comparison, for status conferral we find most evidence in favor of the baseline model that assumes a varying intercept per site and a varying intercept per design, but no experimental effects (i.e., no main effect of target gender, target emotion or a gender-by-emotion interaction). Specifically, the baseline model outperforms the Gender Stereotyping model by a factor of `r myformat(1/bfsb.status[1])`, the Status Signalling perspective by a factor of `r myformat(1/bfsb.status[2])`, and the Culture Change/Study Savviness model (reversed gender stereotyping) by a factor of `r myformat(1/bfsb.status[3])`, which is considered strong evidence against the theoretical perspectives [@LeeWagenmakersBayesBook]. Finally, the baseline model fits the data much better than the null model (BF$_{b0}=$ `r myformat(1/bfsb.status[5])`), indicating that the overall status ratings differ across designs. Figure \@ref(fig:fig-main)A visualizes the absence of experimental effects. 
+Based on the Bayes factor model comparison, for status conferral we find most evidence in favor of the baseline model that assumes a varying intercept per site and a varying intercept per material set, but no experimental effects (i.e., no main effect of target gender, target emotion or a gender-by-emotion interaction). Specifically, the baseline model outperforms the Gender Stereotyping model by a factor of `r myformat(1/bfsb.status[1])`, the Status Signalling perspective by a factor of `r myformat(1/bfsb.status[2])`, and the Culture Change/Study Savviness model (reversed gender stereotyping) by a factor of `r myformat(1/bfsb.status[3])`, which is considered strong evidence against the theoretical perspectives [@LeeWagenmakersBayesBook]. Finally, the baseline model fits the data much better than the null model (BF$_{b0}=$ `r myformat(1/bfsb.status[5])`), indicating that the overall status ratings differ across material sets. Figure \@ref(fig:fig-main)A visualizes the absence of experimental effects. 
 
 ```{r other-dvs-analysis, cache=T}
 # recode competence and create composite 
@@ -380,7 +383,7 @@ apa_table(data.frame(Comparison = names(bfs0.warmth),
 
 ## Primary Methodological Tests
 
-__*Varying effects model.*__ For the primary analyses, we constructed simple common effect models that assume that the effects of interest are of equal size across different designs. As preregistered, we also investigated whether the effects differ substantially per design, and if so what design-related features could explain the pattern. To this end, we built a varying effects model that allows the main effects of target gender and target emotion, as well as the interaction, to vary between designs. Note that we did not investigate random effects across sites, as study 1 indicated no evidence in favor of variability across labs.
+__*Varying effects model.*__ For the primary analyses, we constructed simple common effect models that assume that the effects of interest are of equal size across different material sets. As preregistered, we also investigated whether the effects differ substantially per material set, and if so what material set-related features could explain the pattern. To this end, we built a varying effects model that allows the main effects of target gender and target emotion, as well as the interaction, to vary between material sets. Note that we did not investigate random effects across sites, as study 1 indicated no evidence in favor of variability across labs.
 
 ```{r varying-model, cache=T}
 designs <- dat %>% group_by(design) %>% summarize(design = design[1])
@@ -406,7 +409,7 @@ n.angry.stat <- which(q[1,]>0)
 n.nonangry.stat <- which(q[2,]<0)
 ```
 
-As visualized in Figure \@ref(fig:plotter), however, there is no indication that the target emotion effect and the gender-by-emotion interaction effect vary substantially of systematically across designs. Rather, the 95% credible intervals includes zero across almost all designs for the main effect of target emotion, as well as the interaction effect. For the target emotion effect, angry targets are accorded more status than non-angry targets across `r length(n.angry.stat)` designs, while the opposite is true for `r length(n.nonangry.stat)` design. For the target gender effect, there are `r length(des.male)+length(des.female)` designs for which the coefficient of the target gender effect does not include 0. Across those designs, male targets are accorded higher status than female targets (regardless of emotion condition) for `r length(des.male)` designs and females are accorded higher status than males for `r length(des.female)` design. See Figure \@ref(fig:plotter) which designs show these effects. Corroborating the visual pattern, the Bayes factor analysis suggests that the unconstrained random effects model strongly outperforms the baseline-model that includes only varying intercepts for site and design; BF$_{rb}=$ `r myformat(1/bayes.re$BF_br)`. Note however, that the pattern of between design variation in the size and direction of the target gender effect is not predicted by any of the theoretical models. 
+As visualized in Figure \@ref(fig:plotter), however, there is no indication that the target emotion effect and the gender-by-emotion interaction effect vary substantially of systematically across material sets. Rather, the 95% credible intervals includes zero across almost all material sets for the main effect of target emotion, as well as the interaction effect. For the target emotion effect, angry targets are accorded more status than non-angry targets across `r length(n.angry.stat)` material sets, while the opposite is true for `r length(n.nonangry.stat)` material set. For the target gender effect, there are `r length(des.male)+length(des.female)` material sets for which the coefficient of the target gender effect does not include 0. Across those material sets, male targets are accorded higher status than female targets (regardless of emotion condition) for `r length(des.male)` material sets and females are accorded higher status than males for `r length(des.female)` material set. See Figure \@ref(fig:plotter) which material sets show these effects. Corroborating the visual pattern, the Bayes factor analysis suggests that the unconstrained random effects model strongly outperforms the baseline-model that includes only varying intercepts for site and material set; BF$_{rb}=$ `r myformat(1/bayes.re$BF_br)`. Note however, that the pattern of between material set variation in the size and direction of the target gender effect is not predicted by any of the theoretical models. 
 
 ```{r varying-details-dvs}
 # more details target emotion effect
@@ -427,10 +430,10 @@ q <- apply(bayes.re.cont$gammas, 2, quantile, c(.025,.975))
 n.angry.cont <- which(q[1,]>0)
 ```
 
-Figure \@ref(fig:plotter-comp) shows the intercepts and varying effects across design for competence ratings as the outcome measure. In line with the Bayes factor analysis providing most evidence for the unconstrained model, the pattern in panel C displays a *negative* effect of anger vs. non-anger across `r length(n.nonangry.comp)` designs (i.e., an effect opposite to predictions by the Status Signalling perspective). None of the designs show a target gender effect or a gender-by-emotion interaction effect. As predicted by the 'Anger suppresses warmth' perspective, a similar pattern emerges for perceived warmth in Figure \@ref(fig:plotter-warmth): across `r length(n.nonangry.warm)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with non-angry targets considered warmer than angry targets. In addition, across `r length(n.female.warm)` designs, female targets are considered warmer than male targets, while for `r length(n.male.warm)` designs, male targets are considered warmer than female targets. Finally, in `r length(n.stereo.warm)` designs, a gender stereotype effect is observed such that an angry male target is considered warmer than a non-angry male targets and an angry female target, while an angry female target is considered less warm than a non-angry female target and an angry male target. 
-For out-of-control ratings, a reverse pattern for the target emotion effect is shown in Figure \@ref(fig:plotter-control): across `r length(n.angry.cont)` designs the 95% credible interval of the coefficient for target emotion excludes zero, with angry targets considered more out of control than non-angry targets. 
+Figure \@ref(fig:plotter-comp) shows the intercepts and varying effects across material set for competence ratings as the outcome measure. In line with the Bayes factor analysis providing most evidence for the unconstrained model, the pattern in panel C displays a *negative* effect of anger vs. non-anger across `r length(n.nonangry.comp)` material sets (i.e., an effect opposite to predictions by the Status Signalling perspective). None of the material sets show a target gender effect or a gender-by-emotion interaction effect. As predicted by the 'Anger suppresses warmth' perspective, a similar pattern emerges for perceived warmth in Figure \@ref(fig:plotter-warmth): across `r length(n.nonangry.warm)` material sets the 95% credible interval of the coefficient for target emotion excludes zero, with non-angry targets considered warmer than angry targets. In addition, across `r length(n.female.warm)` material sets, female targets are considered warmer than male targets, while for `r length(n.male.warm)` material sets, male targets are considered warmer than female targets. Finally, in `r length(n.stereo.warm)` material sets, a gender stereotype effect is observed such that an angry male target is considered warmer than a non-angry male targets and an angry female target, while an angry female target is considered less warm than a non-angry female target and an angry male target. 
+For out-of-control ratings, a reverse pattern for the target emotion effect is shown in Figure \@ref(fig:plotter-control): across `r length(n.angry.cont)` material sets the 95% credible interval of the coefficient for target emotion excludes zero, with angry targets considered more out of control than non-angry targets. 
 
-```{r plotter, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on status conferral on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. Only the target gender effect seem to differ from zero for some designs."}
+```{r plotter, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated material set-level effects (posterior means) on status conferral on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a material set. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. Only the target gender effect seem to differ from zero for some material sets."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -441,7 +444,7 @@ plotter(bayes.re$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emot
 
 ```
 
-```{r plotter-comp, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on competence on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. A target emotion effect emerges across about half of the designs, yet in the direction opposite as predicted by the Status Signalling perspective."}
+```{r plotter-comp, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated material set-level effects (posterior means) on competence on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a material set. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. A target emotion effect emerges across about half of the material sets, yet in the direction opposite as predicted by the Status Signalling perspective."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -451,7 +454,7 @@ plotter(bayes.re.comp$gammas, c(-2,2), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.comp$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-warmth, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on warmth on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Anger Suppresses Warmth perspective, a target emotion effect emerges across most designs."}
+```{r plotter-warmth, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated material set-level effects (posterior means) on warmth on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a material set. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Anger Suppresses Warmth perspective, a target emotion effect emerges across most material sets."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -461,7 +464,7 @@ plotter(bayes.re.warm$gammas, c(-4,1), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.warm$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-control, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated design-level effects (posterior means) on out-of-control ratings on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Status Signalling perspective, a target emotion effect emerges across about half of the designs."}
+```{r plotter-control, fig.width=6.5, fig.asp=1.2, fig.cap= "Estimated material set-level effects (posterior means) on out-of-control ratings on the response scale of 1 to 11, in increasing order. \\textbf{A.} Intercepts. \\textbf{B.} Target gender effects. \\textbf{C.} Target emotion effects. \\textbf{D.} Gender-by-emotion interaction effects. Each dot represents a material set. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red. In line with the Status Signalling perspective, a target emotion effect emerges across about half of the material sets."}
 par(mfrow=c(2,2))
 J <- length(unique(designs))
 colors <- rep("grey36", J) #hsv((1:J)/J,1,.7,1)
@@ -471,7 +474,7 @@ plotter(bayes.re.cont$gammas, c(-1,3), designs, colors, main = "C. Target Emotio
 plotter(bayes.re.cont$thetas, c(-1.5,1.5), designs, colors, main = "D. Gender-by-Emotion Effect", labs = c("Reversed Stereotype","Stereotype"), effectcolors = TRUE)
 ```
 
-```{r plotter-combined, fig.width=6.5, fig.asp=1.4, fig.cap="Estimated design-level effects (posterior means) on the response scale of 1 to 11, in increasing order. \\textbf{A.} Target gender effect on status conferral. \\textbf{B.} Target emotion effects on status conferral. \\textbf{C.} Target gender-by-emotion interaction effect on status conferral. \\textbf{D.} Target emotion effects on warmth. \\textbf{E.} Target emotion effect on competence. \\textbf{F.} Target emotion effect on out-of-control ratings. Each dot represents a design. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red."}
+```{r plotter-combined, fig.width=6.5, fig.asp=1.4, fig.cap="Estimated material set-level effects (posterior means) on the response scale of 1 to 11, in increasing order. \\textbf{A.} Target gender effect on status conferral. \\textbf{B.} Target emotion effects on status conferral. \\textbf{C.} Target gender-by-emotion interaction effect on status conferral. \\textbf{D.} Target emotion effects on warmth. \\textbf{E.} Target emotion effect on competence. \\textbf{F.} Target emotion effect on out-of-control ratings. Each dot represents a material set. The horizontal lines denote the 95\\% credible intervals. Estimated effects for which the 95\\% credible interval includes zero are displayed in grey and estimated effects for which the 95\\% credible intervals exclude zero are displayed in red."}
 par(mfrow=c(3,2))
 plotter(bayes.re$betas,  c(-1.5,1.5), designs, colors, main = "A. Target Gender Effect on Status Conferral", labs = c("Female","Male"), effectcolors = TRUE)
 plotter(bayes.re$gammas, c(-1.5,1.5), designs, colors, main = "B. Target Emotion Effect on Status Conferral", labs = c("Non-Angry","Angry"), effectcolors = TRUE)
@@ -482,7 +485,7 @@ plotter(bayes.re.cont$gammas, c(-1,3), designs, colors, main = "F. Target Emotio
 
 ```
 
-```{r plot-design-moderators, fig.width=6.5, fig.asp=1.4, fig.cap="Varying effect of target gender per design, colored based on design-related moderators."}
+```{r plot-design-moderators, fig.width=6.5, fig.asp=1.4, fig.cap="Varying effect of target gender per material set, colored based on material set-related moderators."}
 colors_mod <- RColorBrewer::brewer.pal(3, "Dark2")
 
 par(mfrow=c(3,2))
@@ -514,7 +517,7 @@ orig <- 27
 adapt <- c(1:8)
 cols.5 <- ifelse(designs %in% orig, colors_mod[1], colors_mod[3])
 cols.5 <- ifelse(designs %in% adapt, colors_mod[2], cols.5)
-plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.5, main = "E. Type of Design", labs = c("Female","Male"), leg = c("adapted","novel","original"))
+plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.5, main = "E. Type of Material Set", labs = c("Female","Male"), leg = c("adapted","novel","original"))
 
 #anger extremity
 mod.anger <- c(7,11,13,15,17,19,21,23,25)
@@ -525,7 +528,7 @@ plotter(bayes.re$betas, c(-1.5,1.5), designs, cols.6, main = "E. Extremity of An
 
 ```
 
-For status conferral as the outcome variable, we further investigated to what extent the target gender effect might be explained by design-related moderators. 
+For status conferral as the outcome variable, we further investigated to what extent the target gender effect might be explained by material set-related moderators. 
 Based on visual inspection, it seems that only the format of the manipulation might have a systematic influence on the target gender effect. That is, when presented in a video, male targets might be accorded more status than female targets, whereas this effect is absent when presented as an audio recording or comic book or written scenario. 
 
 ```{r test-format, cache=T}
@@ -567,7 +570,7 @@ bf.gen.vid <- apa_print(ttestBF(formula = status ~ gender, dat = dat.vid), mcmc_
 bf.gen.oth <- apa_print(ttestBF(formula = status ~ gender, dat = dat.oth), mcmc_error = F, reciprocal = T)$full_result
 ```
 
-In order to further unpack this potential effect of format, we conducted a Bayesian ANOVA with gender and format as factors plus their interaction. Indeed, we find that the data provide most evidence for the model that includes the factors gender and format, plus their interaction. Comparing the models with and without this interaction term gives a Bayes factor of `r myformat(bf.gen.format)` in favor of the gender-by-format interaction. As seen in Figure \@ref(fig:plot-design-moderators)B, the video format particularly increases status conferral to male targets. Indeed, if we look at designs with a video format and other designs separately, we find evidence in favor of a gender effect for video designs `r bf.gen.vid` and evidence against a gender effect for the other designs (audio, scenarios, comic book): `r bf.gen.oth`. 
+In order to further unpack this potential effect of format, we conducted a Bayesian ANOVA with gender and format as factors plus their interaction. Indeed, we find that the data provide most evidence for the model that includes the factors gender and format, plus their interaction. Comparing the models with and without this interaction term gives a Bayes factor of `r myformat(bf.gen.format)` in favor of the gender-by-format interaction. As seen in Figure \@ref(fig:plot-design-moderators)B, the video format particularly increases status conferral to male targets. Indeed, if we look at material sets with a video format and other material sets separately, we find evidence in favor of a gender effect for video material sets `r bf.gen.vid` and evidence against a gender effect for the other material sets (audio, scenarios, comic book): `r bf.gen.oth`. 
 
 
 ```{r anger-extremity, cache=TRUE}
@@ -584,7 +587,7 @@ dat_sub$site <- as.numeric(as.factor(dat_sub$site))
 bayes.extremity.rand <- doRandomExtremity(dat_sub, dat_sub$status, rscale)
 ```
 
-__*Anger Extremity Hypothesis A.*__ We predicted that moderate levels of anger would lead to more status conferral than extreme anger for both targets. To this end, we compared status conferral to angry targets between designs that were identical except for the extremity of the displayed anger. 
+__*Anger Extremity Hypothesis A.*__ We predicted that moderate levels of anger would lead to more status conferral than extreme anger for both targets. To this end, we compared status conferral to angry targets between material sets that were identical except for the extremity of the displayed anger. 
 However, the data indicated that mild anger led to *less* status conferral compared to extreme anger ($M_{mild}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="mild"]),2)`); $M_{extreme}=$ `r round(mean(dat_sub$status[dat_sub$extremity=="extreme"]),2)`). As the effect went in the opposite direction, the Bayes factor analysis also provided evidence against the anger extremity hypothesis: `r bf.anger.extr`. 
 
 ## Secondary Theoretical Tests 
@@ -926,7 +929,7 @@ apa_table(tab,
           escape=F)
 ```
 
-For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site and design. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the interaction term between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender, and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
+For the moderator analyses, we constructed different models to reflect theoretical predictions. We start again from the null-model ($\calM_0$) that includes only a random intercept per site and material set. The second model ($\calM_i$) additionally includes the *individual differences* variable of interest (e.g., sexist beliefs) but without any experimental effects or interactions. This model might be considered the baseline model for the moderation analyses. The third model ($\calM_e$) extends the individual differences model by adding the main *experimental effects* of target emotion, target gender and its interaction. The fourth model ($\calM_m$) is the critical moderation model that adds the interaction term between the individual differences variable and target gender, as well as the threeway interaction between the individual difference variable, target gender, and target emotion. Based on the moderation hypotheses, the sign of the interaction between the moderator and target gender was restricted (e.g., sexist beliefs are expected to be associated with a *decrease* in status conferral to female targets relative to male targets). Finally, we constructed a fully unconstrained model ($\calM_u$) that includes the same terms as the moderation model but does not put any ordinal constraints on the parameters. 
 
 The results of the individual differences moderation analyses are given in Table \@ref(tab:moderator-table1) (for moderation effects related to beliefs about gender (in)equality; perspective 3) and Table \@ref(tab:moderator-table2) (for moderation effects related to self-presentation concerns and study savviness; perspective 4). As the Bayes factors show, there is evidence that some of the individual difference measures (i.e., beliefs about gender in the workplace, internal motivation not to appear sexist, external motivation not to appear sexist, and awareness of the target gender) are related to status conferral in general (main effects of individual differences), but strong evidence *against* moderation effects of the individual differences on the experimental target gender, target emotion, or target gender-by-emotion effects (BF$_{im}$). 
 <!-- Note that only for sexist beliefs the evidence against moderation vs. individual differences is not overwhelming, yet here the null-model outperforms both the individual differences only model (BF$_{0i}=$ `r myformat(1/bfsI.sb[1])`) and the moderation model (BF$_{0m}=$ `r myformat(bayes.sb$bfsID[3]/bayes.sb$bfsID[1])`). -->
@@ -1220,20 +1223,20 @@ As in Study 1, for the main analyses we used the intent-to-treat approach, in wh
 - Material quality.
 
 1. Exclude no one based on reported quality of video/audio materials
-2. Exclude participants from designs with video/audio stimuli who indicated poor video/audio quality (<3 on the 7-point scale)
+2. Exclude participants from material sets with video/audio stimuli who indicated poor video/audio quality (<3 on the 7-point scale)
 
 - Mode of administration.
 
 1. Exclude no one based on method of taking the survey
 2. Exclude participants who did not complete the study on a laptop or desktop
 
-- Manipulation failure designs.
+- Manipulation failure material sets.
 
-1. Include all designs 
-2. Exclude designs for which there is no compelling evidence (i.e., BF$<10$) for both of the manipulation checks (target gender and target emotion)
-3. Exclude designs for which there is no compelling evidence (i.e., BF$<10$) for either of the manipulation checks (target gender or target emotion). 
+1. Include all material sets 
+2. Exclude material sets for which there is no compelling evidence (i.e., BF$<10$) for both of the manipulation checks (target gender and target emotion)
+3. Exclude material sets for which there is no compelling evidence (i.e., BF$<10$) for either of the manipulation checks (target gender or target emotion). 
 
-In the preregistration we specified that we would only analyze a specific exclusion-based multiverse path when the exclusion affect at least 5% of the sample. However, the straightlining criterion did not reach this threshold; only `r sum(dat$pass.3==0, na.rm=T)/nrow(dat)*100`% of the sample was excluded because of straightlining across all 5 scales. The language fluency (`r sum(dat$pass.1==0, na.rm=T)/nrow(dat)*100`%), target gender manipulation check item (`r sum(dat$pass.2==0, na.rm=T)/nrow(dat)*100`%), the material quality (`r sum(dat$pass.4==0, na.rm=T)/nrow(dat)*100`%), and the mode of administration (`r sum(dat$pass.5==0, na.rm=T)/nrow(dat)*100`%) did result in a meaningful proportion of exclusion. There was only 1 design (i.e., design 7) for which there was no compelling evidence that targets in the anger condition were perceived as angrier than in the not-angry condition (BF$_{10}=$ `r BF_emo[BF_emo<10]`). This, however, meant (`r sum(dat$pass.6b==0)/nrow(dat)*100`%) of the sample, which does not pass the threshold of 5%. 
+In the preregistration we specified that we would only analyze a specific exclusion-based multiverse path when the exclusion affect at least 5% of the sample. However, the straightlining criterion did not reach this threshold; only `r sum(dat$pass.3==0, na.rm=T)/nrow(dat)*100`% of the sample was excluded because of straightlining across all 5 scales. The language fluency (`r sum(dat$pass.1==0, na.rm=T)/nrow(dat)*100`%), target gender manipulation check item (`r sum(dat$pass.2==0, na.rm=T)/nrow(dat)*100`%), the material quality (`r sum(dat$pass.4==0, na.rm=T)/nrow(dat)*100`%), and the mode of administration (`r sum(dat$pass.5==0, na.rm=T)/nrow(dat)*100`%) did result in a meaningful proportion of exclusion. There was only one material set (i.e., material set 7) for which there was no compelling evidence that targets in the anger condition were perceived as angrier than in the not-angry condition (BF$_{10}=$ `r BF_emo[BF_emo<10]`). This, however, meant (`r sum(dat$pass.6b==0)/nrow(dat)*100`%) of the sample, which does not pass the threshold of 5%. 
 
 ```{r multiverse-competence, cache=TRUE}
 # make sure the dv is still called 'status' 
@@ -1290,7 +1293,7 @@ multiverse.control = do.multiverse(dat, rscale, bayes.control)
 ```
 
 ```{r multiverse-tab,eval=T}
-modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+modnames <- c("Gender Stereotyping vs. material sets", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets")
 
 bfs.multi.status <- sapply(multiverse.status$bayes.multiverse, function(x) x$bfsb[1:5])
 
@@ -1299,7 +1302,7 @@ row.names(tab.status) <- NULL
 ```
 
 ```{r multiverse-tab-competence,eval=T}
-modnames.competence <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+modnames.competence <- c("Gender Stereotyping vs. material sets", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets")
 
 bfs.multi.competence <- sapply(multiverse.competence$bayes.multiverse, function(x) x$bfsb[1:5])
 
@@ -1309,7 +1312,7 @@ row.names(tab.competence) <- NULL
 ```
 
 ```{r multiverse-tab-warmth,eval=T}
-modnames.warmth <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs","Warmth vs. Designs")
+modnames.warmth <- c("Gender Stereotyping vs. material sets", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets","Warmth vs. material sets")
 
 bfs.multi.warmth <- sapply(multiverse.warmth$bayes.multiverse, function(x) x$bfsb[1:6])
 
@@ -1318,7 +1321,7 @@ row.names(tab.warmth) <- NULL
 ```
 
 ```{r multiverse-tab-control,eval=T}
-modnames.control <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+modnames.control <- c("Gender Stereotyping vs. material sets", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets")
 
 bfs.multi.control <- sapply(multiverse.control$bayes.multiverse, function(x) x$bfsb[1:5])
 
@@ -1422,7 +1425,7 @@ cowplot::plot_grid(plotrow, legend,
 
 ```
 
-Figure \@ref(fig:multiverse-fig-competence)A displays the results of the 16 viable multiverse path for the main analysis of status conferral in which the models corresponding to the different theoretical perspectives are compared to the baseline model (random intercepts for sites and designs). For status conferral, given the most favorable set of exclusions, the data are still `r 1/max(as.numeric(bfs.multi.status[2,]))` times more likely under the baseline model than under the status signaling model. 
+Figure \@ref(fig:multiverse-fig-competence)A displays the results of the 16 viable multiverse path for the main analysis of status conferral in which the models corresponding to the different theoretical perspectives are compared to the baseline model (random intercepts for sites and material sets). For status conferral, given the most favorable set of exclusions, the data are still `r 1/max(as.numeric(bfs.multi.status[2,]))` times more likely under the baseline model than under the status signaling model. 
 
 # Exploratory Analyses
 
@@ -1456,8 +1459,8 @@ original <- subset(dat, design==27)
 bayes.original.gender <- apa_print(ttestBF(formula = status ~ gender, data = original), mcmc_error = F, reciprocal = T)$full_result
 ```
 
-__*Target Gender Effect for the Brescoll and Uhlmann (2008) design across Studies 1 and 2.*__
-Our present Study 1 finds a tendency for greater to status attribution to women, whereas Study 2 finds greater status attribution to men. If we only consider the original design (i.e., design 27) in Study 2, we find no evidence for a target gender effect: `r bayes.original.gender`, $M_{male}=$ `r mean(original$status[original$gender=="male"])`, $M_{female}=$ `r mean(original$status[original$gender=="female"])`. The absence of a gender difference in the original design can also be observed from Figure \@ref(fig:plot-design-moderators)E, where the target gender coefficient is almost exactly 0. 
+__*Target Gender Effect for the Brescoll and Uhlmann (2008) material set across Studies 1 and 2.*__
+Our present Study 1 finds a tendency for greater to status attribution to women, whereas Study 2 finds greater status attribution to men. If we only consider the original material set (i.e., material set 27) in Study 2, we find no evidence for a target gender effect: `r bayes.original.gender`, $M_{male}=$ `r mean(original$status[original$gender=="male"])`, $M_{female}=$ `r mean(original$status[original$gender=="female"])`. The absence of a gender difference in the original material set can also be observed from Figure \@ref(fig:plot-design-moderators)E, where the target gender coefficient is almost exactly 0. 
 
 ```{r gaertig_replication}
 gaertig <- subset(dat, design==7|design==8)
@@ -1478,7 +1481,7 @@ pmain <- ggplot(gaertig, aes(x = perc.anger, y = jitter(status), color = conditi
   scale_y_continuous(limits=c(1,11), breaks = seq(1,11,1)) + 
   xlab("Perceived anger") +
   ylab("Status") +
-  guides(color=guide_legend(title="Emotion | Design"))
+  guides(color=guide_legend(title="Emotion | material set"))
 # Marginal densities along x axis
 xdens <- axis_canvas(pmain, axis = "x")+
   geom_density(data = gaertig, aes(x = perc.anger, fill = condition),
@@ -1497,12 +1500,12 @@ ggdraw(p2)
 
 ```
 
-__*Anger Extremity Effect for the Gaertig et al. (2019) design.*__
-We conducted a directed Bayesian t-test to see if we can replicate Gaertig et al.'s finding that moderate anger leads to more status conferral than extreme anger (regardless of target gender), by looking at their design (i.e., 7&8) in isolation. However, the data indicate *less* status conferral to moderate anger ($M_{moderate}=$ `r mean(gaertig$status[gaertig$design=="7"])`) than to extreme anger ($M_{extreme}=$ `r mean(gaertig$status[gaertig$design=="8"])`). The directed Bayesian t-test confirms strong evidence against the hypothesis: `r bayes.gaertig.dir`. In fact, when we remove the directionality constraint, we get some moderate evidence for a difference (in the opposite direction): `r bayes.gaertig`. 
+__*Anger Extremity Effect for the Gaertig et al. (2019) material set.*__
+We conducted a directed Bayesian t-test to see if we can replicate Gaertig et al.'s finding that moderate anger leads to more status conferral than extreme anger (regardless of target gender), by looking at their material set (i.e., 7&8) in isolation. However, the data indicate *less* status conferral to moderate anger ($M_{moderate}=$ `r mean(gaertig$status[gaertig$design=="7"])`) than to extreme anger ($M_{extreme}=$ `r mean(gaertig$status[gaertig$design=="8"])`). The directed Bayesian t-test confirms strong evidence against the hypothesis: `r bayes.gaertig.dir`. In fact, when we remove the directionality constraint, we get some moderate evidence for a difference (in the opposite direction): `r bayes.gaertig`. 
 
-Relatedly, we explored how the Gaertig et al. (2019) design compared to the others that directly manipulated anger extremity. To unpack the anger extremity effect on status conferral, we estimated the overall status conferral per design, using varying intercepts per design and a fixed effect of the extremity manipulation. Figure \@ref(fig:plot-extremity) shows the estimated status conferral for the 18 designs in which extremity was manipulated directly, as well as the perceived anger extremity as rated by participants in the anger condition. Notably, the extremity effect (i.e., difference between the mild and extreme version) is the largest in the original Gaertig et al. (2019) design, yet in the opposite direction as found by Gaertig et al. (2019) Furthermore, while perceived anger extremity is consistently higher in the the extreme anger version of each design, the difference is clearly largest in the original Gaertig et al. design (7&8). 
+Relatedly, we explored how the Gaertig et al. (2019) material set compared to the others that directly manipulated anger extremity. To unpack the anger extremity effect on status conferral, we estimated the overall status conferral per material set, using varying intercepts per material set and a fixed effect of the extremity manipulation. Figure \@ref(fig:plot-extremity) shows the estimated status conferral for the 18 material sets in which extremity was manipulated directly, as well as the perceived anger extremity as rated by participants in the anger condition. Notably, the extremity effect (i.e., difference between the mild and extreme version) is the largest in the original Gaertig et al. (2019) material set, yet in the opposite direction as found by Gaertig et al. (2019) Furthermore, while perceived anger extremity is consistently higher in the the extreme anger version of each material set, the difference is clearly largest in the original Gaertig et al. material set (7&8). 
 
-```{r plot-extremity, fig.cap="Estimated status conferral per design, colored based on anger extremity. Estimates are grouped per design and ordered based on the grouped average. The x's reflect the average perceived anger extremity in the anger condition per design, as rated by participants. The x-axis at the top gives the scale of the perceived anger extremity ratings (on a 0-100 scale) and the x-axis at the bottem gives scale of the estimated status conferral (on a 1-10 scale). "}
+```{r plot-extremity, fig.cap="Estimated status conferral per material set, colored based on anger extremity. Estimates are grouped per material set and ordered based on the grouped average. The x's reflect the average perceived anger extremity in the anger condition per material set, as rated by participants. The x-axis at the top gives the scale of the perceived anger extremity ratings (on a 0-100 scale) and the x-axis at the bottem gives scale of the estimated status conferral (on a 1-10 scale). "}
 cols <- ifelse(designs[designs%in%dat_sub$design_num] %in% mod.anger, colors_mod[1], colors_mod[2])
 #order based on mean status conferral per design, with first moderate and then extreme version of the design 
 m <- colMeans(bayes.extremity.rand$eff)
@@ -1527,8 +1530,8 @@ dat_mccormick <- subset(dat, design=="1"&emotion=="angry")
 bayes.mccormick <- apa_print(ttestBF(formula = status ~ gender, data = dat_mccormick, nullInterval = c(0,Inf)), mcmc_error = F, reciprocal = F)$full_result
 ```
 
-__*Gender Effect for the McCormick-Huhn & Shields (2019) design.*__
-Here, we assessed whether the pattern in the original McCormick-Huhn & Shields (2019) storyboard design replicates, such that angry women are accorded *more* status than angry men. In the original McCormick-Huhn & Shields (2019) study, only anger conditions were included. To replicate their results, we ran a directed Bayesian t-test with target gender as independent variable on the subset of the data with design 1 and only the anger condition. The data indeed indicate slightly more status conferral to angry female ($M_{female}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="female"])`) than to angry male targets ($M_{male}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="male"])`). However, the directed Bayesian t-test suggests that these data are quite undiagnostic and provide only anecdotal for the hypothesis: `r bayes.mccormick`. Note that there are only `r sum(dat_mccormick$gender=="female")` participants in the angry female target condition and `r sum(dat_mccormick$gender=="male")` participants in the angry male target condition. 
+__*Gender Effect for the McCormick-Huhn & Shields (2019) material set.*__
+Here, we assessed whether the pattern in the original McCormick-Huhn & Shields (2019) storyboard material set replicates, such that angry women are accorded *more* status than angry men. In the original McCormick-Huhn & Shields (2019) study, only anger conditions were included. To replicate their results, we ran a directed Bayesian t-test with target gender as independent variable on the subset of the data with material set 1 and only the anger condition. The data indeed indicate slightly more status conferral to angry female ($M_{female}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="female"])`) than to angry male targets ($M_{male}=$ `r mean(dat_mccormick$status[dat_mccormick$gender=="male"])`). However, the directed Bayesian t-test suggests that these data are quite undiagnostic and provide only anecdotal for the hypothesis: `r bayes.mccormick`. Note that there are only `r sum(dat_mccormick$gender=="female")` participants in the angry female target condition and `r sum(dat_mccormick$gender=="male")` participants in the angry male target condition. 
 
 # An angry woman can get whatever she wants
 Here, we demonstrate how we can get the desired result of replicating the original Brescoll & Uhlmann (2008) result if we cherry-pick one of the many reasonable analysis paths. 
@@ -1613,7 +1616,7 @@ plot.multiverse.dv = function(data, cols, title, ybreaks, legend=FALSE, jitter0=
   return(sp)
 }
 
-modnames <- c("Gender Stereotyping vs. Designs", "Status Signalling vs. Designs", "Culture Change/Study Savviness vs. Designs", "Unconstrained vs. Designs", "Null vs. Designs")
+modnames <- c("Gender Stereotyping vs. material sets", "Status Signalling vs. material sets", "Culture Change/Study Savviness vs. material sets", "Unconstrained vs. material sets", "Null vs. material sets")
 
 bfs.multi.status.single <- sapply(multiverse.status.single$bayes.multiverse, function(x) x$bfsb[1:5])
 
@@ -1625,9 +1628,9 @@ dd <- data.frame(dv = factor(c(rep("multi",3),rep("single",3))),
 dd <- reshape(dd, varying = list(3:18), direction = "long")
 dd$n <- c(rep(multiverse.status$subs, each=3), rep(multiverse.status.single$subs, each=3))
 dd$n <- as.numeric(dd$n)
-dd$Comparison <- factor(dd$Comparison, levels = c("Gender Stereotyping vs. Designs",
-                                                  "Status Signalling vs. Designs",
-                                                  "Culture Change/Study Savviness vs. Designs"))
+dd$Comparison <- factor(dd$Comparison, levels = c("Gender Stereotyping vs. material sets",
+                                                  "Status Signalling vs. material sets",
+                                                  "Culture Change/Study Savviness vs. material sets"))
 
 dd <- data.frame(dv = factor(c(rep("multi",16),rep("single",16))),
                  BFs.1 = unlist(c(tab.status[1,2:17],tab.status.single[1,2:17])),
@@ -1649,10 +1652,87 @@ So which are those highlighted paths? What are the corresponding specifications?
 cherries <- which(tab.status.single[1,2:17]>1)
 ```
 
-Evidence in favor of the gender stereotyping perspective only occurs when we use (1) the single-item dependent variable, (2a) *only* exclude participants who did not complete the study on a computer OR (2b) exclude participants who did not complete the study on a computer AND did not correctly recall the target gender. However, if we use any other constellation of exclusion criteria we get evidence *against* the gender stereotyping perspective, such as (2c) exclude participants who did not complete the study on a computer and exclude participants who have less than 5 years of English experience, or (2d) exclude participants who did not complete the study on a computer and participants who did not correctly recall the target gender and participants from designs with video/audio stimuli who indicated poor video/audio quality. 
+Evidence in favor of the gender stereotyping perspective only occurs when we use (1) the single-item dependent variable, (2a) *only* exclude participants who did not complete the study on a computer OR (2b) exclude participants who did not complete the study on a computer AND did not correctly recall the target gender. However, if we use any other constellation of exclusion criteria we get evidence *against* the gender stereotyping perspective, such as (2c) exclude participants who did not complete the study on a computer and exclude participants who have less than 5 years of English experience, or (2d) exclude participants who did not complete the study on a computer and participants who did not correctly recall the target gender and participants from material sets with video/audio stimuli who indicated poor video/audio quality. 
 
 For those two paths where we obtained evidence supporting the gender stereotyping perspective, we get a Bayes factor of `r tab.status.single[1,cherries[1]+1]` with `r dd$n[dd$BFs.1==tab.status.single[1,cherries[1]+1]]` participants and a Bayes factor of `r tab.status.single[1,cherries[2]+1]` with `r dd$n[dd$BFs.1==tab.status.single[1,cherries[2]+1]]` participants. 
 
+# Sensitivity analysis. 
+
+To assess the impact of prior settings, we conducted a sensitivity analysis for the key results of comparing the four theoretically informed models on status conferral to the baseline model. For this analysis, there are three key prior settings on the scales of effect sizes, the prior on the main effects, the prior on the interaction, and the prior on the variability of material sets. Our preregistered settings were $r_\text{main}= 0.25$, $r_\text{interaction}= 0.25$, $r_\text{variability}= 0.15$, indicating small effects overall. Here, we varied these settings together and separately to assess how robust the Bayes factor model comparison is. We compared the following prior settings:
+
+1. $r_\text{main}= 0.5$, $r_\text{interaction}= 0.5$, $r_\text{variability}= 0.15$
+2. $r_\text{main}= 0.125$, $r_\text{interaction}= 0.125$, $r_\text{variability}= 0.15$
+3. $r_\text{main}= 0.25$, $r_\text{interaction}= 0.25$, $r_\text{variability}= 0.3$
+4. $r_\text{main}= 0.25$, $r_\text{interaction}= 0.25$, $r_\text{variability}= 0.075$
+5. $r_\text{main}= 0.125$, $r_\text{interaction}= 0.125$, $r_\text{variability}= 0.075$
+6. $r_\text{main}= 0.125$, $r_\text{interaction}= 0.0625$, $r_\text{variability}= 0.15$
+
+Note that these settings, except for the first one, correspond to extremely small effect sizes. As can be seen from Figure XX, the results show very stable Bayes factors---the baseline model dominates all other models across all settings.
+
+```{r status-analysis-sens1, cache=T}
+rscale <- c("main" = 1/2, "int" = 1/2, "rand" = 1, "var" = .15)
+bayes.status.sens1 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r status-analysis-sens2, cache=T}
+rscale <- c("main" = 1/8, "int" = 1/8, "rand" = 1, "var" = .15)
+bayes.status.sens2 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r status-analysis-sens3, cache=T}
+rscale <- c("main" = 1/4, "int" = 1/4, "rand" = 1, "var" = .3)
+bayes.status.sens3 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r status-analysis-sens4, cache=T}
+rscale <- c("main" = 1/4, "int" = 1/4, "rand" = 1, "var" = .075)
+bayes.status.sens4 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r status-analysis-sens5, cache=T}
+rscale <- c("main" = 1/8, "int" = 1/8, "rand" = 1, "var" = .075)
+bayes.status.sens5 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r status-analysis-sens6, cache=T}
+rscale <- c("main" = 1/8, "int" = 1/16, "rand" = 1, "var" = .15)
+bayes.status.sens6 <- doBayes2(plotdat, plotdat$status, rscale)
+```
+
+```{r table-sens}
+bfs.set0 <- bayes.status$bfsb
+bfs.set1 <- bayes.status.sens1$bfsb
+bfs.set2 <- bayes.status.sens2$bfsb
+bfs.set3 <- bayes.status.sens3$bfsb
+bfs.set4 <- bayes.status.sens4$bfsb
+bfs.set5 <- bayes.status.sens5$bfsb
+bfs.set6 <- bayes.status.sens6$bfsb
+
+makeLargestBold <- function(bfs){
+  largest <- which(bfs == max(bfs))
+  bfs.print <- myformat(bfs)
+  if(max(bfs)>1){
+    bfs.print[largest] <- ifelse(bfs[largest]>99999,paste0("\\bm{",bfs.print[largest],"}"),paste0("\\textbf{",bfs.print[largest],"}"))
+  }
+  return(bfs.print)
+}
+
+apa_table(data.frame(Comparison = names(bayes.status$bfsb), 
+                     Original = makeLargestBold(bfs.set0), 
+                     "Set 1" = makeLargestBold(bfs.set1),
+                     "Set 2" = makeLargestBold(bfs.set2),
+                     "Set 3" = makeLargestBold(bfs.set3),
+                     "Set 4" = makeLargestBold(bfs.set4),
+                     "Set 5" = makeLargestBold(bfs.set5),
+                     "Set 6" = makeLargestBold(bfs.set6)),
+          col_spanners = list(`Prior Sets` = c(2,8)),
+          # col.names = c("Comparison", "Status","Competence","Warmth","Out of Control"),
+          row.names = FALSE,
+          align = c("l","c","c","c","c","c", "c", "c"),
+          caption = "Bayes factors for the theoretical models vs. the baseline (intercepts only) models for the different prior settings", 
+          escape=F,
+          note = "None of the theoretical models performs better than the baseline model for all prior settings.")
+```
 
 # Discussion
 
@@ -1672,18 +1752,18 @@ For those two paths where we obtained evidence supporting the gender stereotypin
 
 ## Model Specification 
 
-For the main analyses, we used Bayesian hierarchical modeling with participants nested in countries/labs and in designs. As the random-effects model in Study 1 indicated evidence against variability between countries/labs, and since we're interested in between-design variability in Study 2, we used varying intercepts across sites and varying intercepts + varying slopes across designs. We first constructed an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see below). Bayes factor model comparison is used to compare the models and determine what theory best predicts the empirical data. This method is based on the work by @haaf2018capturing. 
+For the main analyses, we used Bayesian hierarchical modeling with participants nested in countries/labs and in material sets. As the random-effects model in Study 1 indicated evidence against variability between countries/labs, and since we're interested in between-material set variability in Study 2, we used varying intercepts across sites and varying intercepts + varying slopes across material sets. We first constructed an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see below). Bayes factor model comparison is used to compare the models and determine what theory best predicts the empirical data. This method is based on the work by @haaf2018capturing. 
 
-Let $Y_{ijklm}$ be the status rating of the $i$th lab, the $j$th design, the $k$th participant in the $l$th target gender condition ($l=1,2$, for female and male targets, respectively) and the $m$th target emotion condition ($m=1,2$, for not-anger and anger expressions, respectively). Then 
+Let $Y_{ijklm}$ be the status rating of the $i$th lab, the $j$th material set, the $k$th participant in the $l$th target gender condition ($l=1,2$, for female and male targets, respectively) and the $m$th target emotion condition ($m=1,2$, for not-anger and anger expressions, respectively). Then 
 \[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{3jlm} \theta_j, \sigma^2),\]
 
 where,
 
 - $\alpha_i$ is the baseline rating for the $i$th lab
-- $\eta_j$ is the baseline rating for the $j$th design
-- $\beta_j$ is the target gender effect for the $j$th design
-- $\gamma_j$ is the target emotion effect for the $j$th design
-- $\theta_j$ is the gender-by-emotion interaction effect for the $j$th design
+- $\eta_j$ is the baseline rating for the $j$th material set
+- $\beta_j$ is the target gender effect for the $j$th material set
+- $\gamma_j$ is the target emotion effect for the $j$th material set
+- $\theta_j$ is the gender-by-emotion interaction effect for the $j$th material set
 
 and
 
@@ -1691,14 +1771,14 @@ and
 - $x_{2jm}$ is the indicator for target emotion ($m=1,2$, for sadness/neutral and anger expressions, respectively)
 - $x_{3jlm}$ is the indicator for the gender-by-emotion interaction. 
 
-1. Null Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, and there are no differences in status conferral between designs. 
+1. Null Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, and there are no differences in status conferral between material sets. 
 
 From the general model, the null-model is adjusted as follows: 
 \[Y_{ijklm} \sim N(\alpha_i, \sigma^2).\]
 
 where $\alpha_i$ is the baseline status conferral rating for $i$th lab. 
 
-2. Designs Baseline Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, but status conferral differs between designs. 
+2. Material Sets Baseline Model: angry men, not-angry men, angry women and not-angry women are all accorded equal status, but status conferral differs between material sets. 
 
 From the general model, the baseline-model is adjusted as follows: 
 \[Y_{ijklm} \sim N(\alpha_i + \eta_j, \sigma^2).\]
