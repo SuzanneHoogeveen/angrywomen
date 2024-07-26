@@ -43,8 +43,8 @@ mask              : false
 urlcolor          : blue
 
 class             : man
-#output            : papaja::apa6_pdf
-output            : papaja::apa6_word
+output            : papaja::apa6_pdf
+#output            : papaja::apa6_word
 csl               : apa6.csl
 ---
 \newcommand{\calM}{\mathcal M}
