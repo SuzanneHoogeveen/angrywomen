@@ -43,8 +43,8 @@ mask              : false
 urlcolor          : blue
 
 class             : man
-output            : papaja::apa6_pdf
-#output            : papaja::apa6_word
+#output            : papaja::apa6_pdf
+output            : papaja::apa6_word
 csl               : apa6.csl
 ---
 \newcommand{\calM}{\mathcal M}
@@ -161,15 +161,13 @@ iic3 <- cor(temp[,1],temp[,2])
 
 The dependent variable 'status conferral' was created by averaging responses to the items on *power*, *independence*, and *status* (average inter-item correlation: `r iic1`). The dependent variable 'competence' was created by averaging responses to the items on *competence* and *knowledgeability* (inter-item correlation: `r iic2`). The dependent variable 'warmth' was created by averaging responses to the items on *likeability* and *warmth* (inter-item correlation: `r iic3`). 
 
-As preregistered, we assessed the reliablity of the individual differences scale by calculating Cronbach's alpha. All five scales were internally consistent and surpassed the threshold of alpha > 0.4; the alpha values were `r nes.a` (news exposure scale), `r im.a` (internal motivation not to be sexist), `r bgw.a` (beliefs about gender inequality in the workplace), `r sb.a` (sexist beliefs), and `r em.a` (external motivation not to appear sexist). 
+As preregistered, we assessed the reliablity of the individual differences scale by calculating Cronbach's alpha. All five scales were internally consistent and surpassed the threshold of alpha > 0.4; the alpha values were `r nes.a` (feminist news exposure scale), `r im.a` (internal motivation not to be sexist), `r bgw.a` (beliefs about gender inequality in the workplace), `r sb.a` (sexist beliefs), and `r em.a` (external motivation not to appear sexist). 
 The variable *number of studies previously participated in* was heavily right-skewed and was therefore binned into 6 groups: "0", "1-2", "3-5", "6-10", "11-20", "20+". 
-
-## Procedure
 
 ## Data analysis
 
 All analyses were conducted in R.
-We constructed hierarchical Bayesian regression models that reflect the predictions from the 5 substantive theories, as well as the null-model and an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. Note that as perspectives 3 and 4 make equal predictions regarding the overall pattern, there were 4 different theoretical models in total. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see Appendix for details). The relative predictive adequacy of these models as well as the unconstrained model was compared using Bayes factors, following the approach by @haaf2017developing, @rouder2019beyond and @haaf2018capturing. 
+We constructed hierarchical Bayesian regression models that reflect the predictions from the 5 substantive theories, as well as the null-model and an unconstrained model that includes all main parameters from the separate theories, which are free to vary in size and direction. Note that as perspectives 3 and 4 make equal predictions regarding the overall pattern, there were 4 different theoretical models in total. In the primary analysis, we used different ordinal constraints to capture the different theoretical predictions (see Appendix for details). The relative predictive adequacy of these models as well as the unconstrained model was compared using Bayes factors, following the approach by @haaf2017developing, @hoogeveen2023improving, @rouder2019beyond and @haaf2018capturing. 
 
 In addition, we assessed the robustness of the findings to somewhat arbitrary analysis decisions by conducting a multiverse analysis [@steegen2016]: We intended to apply different data exclusion criteria related to language experience, a manipulation check, the validity of responses (straightlining on the included scales), perceived material quality, mode of administration (laptop, phone etc.), and a manipulation check on the level of material set. However, as described below, straightlining criteria did not affect a substantial proportion of the sample (less than 2%) and was thus omitted as a separate path in the multiverse analysis. The preregistration for the analysis can be found at \url{https://osf.io/sh3vx/}. 
 
@@ -1011,10 +1009,13 @@ extremity.per.design <- sapply(designs, function(x) mean(dat$perc.anger[dat$desi
 ```{r secondary-analyses, cache=TRUE}
 dat.anger <- dat[dat$emotion=="angry",]
 #anger extremity b
-bayes.extremeb <- apa_print(correlationBF(dat.anger$perc.anger, dat.anger$status, nullInterval = c(-1,0)), mcmc_error = F, reciprocal = T)$full_result
+bayes.extremeb <- apa_print(correlationBF(dat.anger$perc.anger, dat.anger$status, nullInterval = c(-1,0)), mcmc_error = F, reciprocal = T)$full_result$interval
+
 rho.extremeb <- correlationBF(dat.anger$perc.anger, dat.anger$status, posterior = TRUE, iterations = 10000)
+ci.bayes.extremeb <- round(quantile(rho.extremeb[, 1], probs = c(0.025, 0.975)), 2)
+med.bayes.extremeb <- round(median(rho.extremeb[, 1]), 2)
 #appropriateness
-bayes.approp <- apa_print(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)), mcmc_error = F, reciprocal = T)$full_result
+bayes.approp <- apa_print(correlationBF(dat.anger$approp, dat.anger$status, nullInterval = c(0,1)), mcmc_error = F, reciprocal = F)$full_result$interval
 rho.approp <- correlationBF(dat.anger$approp, dat.anger$status, posterior = TRUE, iterations = 10000)
 #dominance 
 bayes.dominance <- doBayesModerators2(dat, dat$status, rscale, dat$dominant, pos = T)
@@ -1023,7 +1024,7 @@ bayes.warmth.mod <- doBayesModerators2(dat, dat$status, rscale, dat$warm, pos = 
 
 ```
 
-__*Anger extremity hypothesis B.*__ We expected that more extreme anger, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. In order to test this hypothesis, we ran a Bayesian correlation analysis with perceived anger and status conferral as variables on the subset of the data including only the anger condition. As we expected a negative relation, the interval was restricted to cover [-1,0]. The data, however, strongly favored the null-hypothesis: `r bayes.extremeb` and the correlation coefficient was in fact slightly positive.  
+__*Anger extremity hypothesis B.*__ We expected that more extreme anger, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. In order to test this hypothesis, we ran a Bayesian correlation analysis with perceived anger and status conferral as variables on the subset of the data including only the anger condition. As we expected a negative relation, the interval was restricted to cover [-1,0]. The data, however, strongly favored the null-hypothesis: `r bayes.extremeb` and the correlation coefficient was in fact slightly positive, $\hat{\rho} = `r med.bayes.extremeb`, CrI = [`r ci.bayes.extremeb`]$.  
 
 __*Appropriateness hypothesis.*__ Here we expected that less appropriate anger expressions, as rated by participants, should be associated with reduced status conferral from anger expressions for both female and male targets. That is, we expected a positive correlation between appropriateness and status conferral in the anger-condition subset of the data. The data suggested that such a correlation was indeed present: `r bayes.approp`. 
 
@@ -1833,7 +1834,7 @@ The anger suppresses warmth model applies the same model and parameters as the s
 7. Cultural Differences: in high confrontation-oriented cultures, angry men and women are accorded more status than not-angry men and women, but this difference decreases or flips in harmony-oriented cultures. 
 This model builds on the model for perspectives 2 and 3 and is extended by parameters for the main effect and interactions of culture (as a standardized continuous score):  
 
-\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{4i} \zeta + x_{5im} \upsilon, \sigma^2,\]
+\[Y_{ijklm} \sim N(\alpha_i + \eta_j + x_{1jl} \beta_j + x_{2jm} \gamma_j + x_{4i} \zeta + x_{5im} \upsilon, \sigma^2),\]
 
 where we include two new parameters: 
 
